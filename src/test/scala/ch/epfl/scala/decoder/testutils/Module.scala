@@ -24,10 +24,10 @@ object Module:
     fromSources(Seq("Test.scala" -> source), scalaVersion, Seq.empty, dependencies)
 
   def fromSources(
-    sources: Seq[(String, String)],
-    scalaVersion: ScalaVersion,
-    scalacOptions: Seq[String],
-    dependencies: Seq[ClasspathEntry]
+      sources: Seq[(String, String)],
+      scalaVersion: ScalaVersion,
+      scalacOptions: Seq[String],
+      dependencies: Seq[ClasspathEntry]
   ): Module =
     val tempDir = Files.createTempDirectory("scala3-binary-decoder")
     val srcDir = tempDir.resolve("src")

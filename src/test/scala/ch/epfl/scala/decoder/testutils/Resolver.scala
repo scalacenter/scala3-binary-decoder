@@ -22,7 +22,12 @@ object Resolver:
       .find(_.absolutePath.getFileName.toString == s"$name-$version.jar")
       .get
 
-  def fetch(org: String, name: String, version: String, options: FetchOptions = FetchOptions.default): Seq[ClasspathEntry] =
+  def fetch(
+      org: String,
+      name: String,
+      version: String,
+      options: FetchOptions = FetchOptions.default
+  ): Seq[ClasspathEntry] =
     val dep = Dependency(coursier.Module(Organization(org), ModuleName(name)), version)
     fetch(Seq(dep), options)
 

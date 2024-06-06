@@ -23,7 +23,7 @@ case class ScalaVersion(value: String) extends Ordered[ScalaVersion]:
       case ((_, _, x), (_, _, y)) if x != y => x - y
       case _ => 0
 
-  def binaryVersion: String = if isScala3 then "3" else if  isScala213 then "2.13" else "2.12"
+  def binaryVersion: String = if isScala3 then "3" else if isScala213 then "2.13" else "2.12"
 
   def isRelease: Boolean = !value.contains("-")
 

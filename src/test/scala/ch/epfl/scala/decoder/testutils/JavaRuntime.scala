@@ -40,8 +40,7 @@ object JavaRuntime:
     java8(javaHome, sources).orElse(java9OrAbove(javaHome, sources))
 
   private def java8(javaHome: Path, srcZip: Option[Path]): Option[JavaRuntime] =
-    for
-      runtimeJar <- Seq("jre/lib/rt.jar", "lib/rt.jar").map(javaHome.resolve).find(Files.exists(_))
+    for runtimeJar <- Seq("jre/lib/rt.jar", "lib/rt.jar").map(javaHome.resolve).find(Files.exists(_))
     yield
       val otherJars = Seq("jre/lib/charsets.jar", "lib/charsets.jar").map(javaHome.resolve).filter(Files.exists(_))
       Java8(javaHome, Seq(runtimeJar) ++ otherJars, srcZip)

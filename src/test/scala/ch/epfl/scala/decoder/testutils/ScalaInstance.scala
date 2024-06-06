@@ -8,8 +8,13 @@ import scala.collection.mutable
 sealed trait ScalaInstance(val libraryJars: Seq[ClasspathEntry], val compilerJars: Seq[ClasspathEntry]):
   val libraryClassLoader = new URLClassLoader(libraryJars.map(_.toURL).toArray, null)
   val compilerClassLoader = new URLClassLoader(compilerJars.map(_.toURL).toArray, libraryClassLoader)
-  
-  def compile(classDir: Path, classPath: Seq[ClasspathEntry], scalacOptions: Seq[String], sourceFiles: Seq[Path]): Unit =
+
+  def compile(
+      classDir: Path,
+      classPath: Seq[ClasspathEntry],
+      scalacOptions: Seq[String],
+      sourceFiles: Seq[Path]
+  ): Unit =
     val args = Array(
       "-d",
       classDir.toString,
@@ -19,13 +24,13 @@ sealed trait ScalaInstance(val libraryJars: Seq[ClasspathEntry], val compilerJar
       scalacOptions ++
       sourceFiles.map(_.toString)
     compileInternal(args)
-  
+
   protected def compileInternal(args: Array[String]): Unit
 end ScalaInstance
 
 final class Scala2Instance(
     libraryJars: Seq[ClasspathEntry],
-    compilerJars: Seq[ClasspathEntry],
+    compilerJars: Seq[ClasspathEntry]
 ) extends ScalaInstance(libraryJars, compilerJars):
   override protected def compileInternal(args: Array[String]): Unit =
     val main = compilerClassLoader.loadClass("scala.tools.nsc.Main")
@@ -49,7 +54,7 @@ final class Scala3Instance(
 
 object ScalaInstance:
   private val cache = mutable.Map.empty[ScalaVersion, ScalaInstance]
-  
+
   def apply(scalaVersion: ScalaVersion): ScalaInstance =
     cache.getOrElseUpdate(scalaVersion, Resolver.fetch(scalaVersion))
 end ScalaInstance

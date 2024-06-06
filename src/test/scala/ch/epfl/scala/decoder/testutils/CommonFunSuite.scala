@@ -13,4 +13,3 @@ trait CommonFunSuite extends munit.FunSuite:
   def isDebug: Boolean =
     val mxBean = ManagementFactory.getRuntimeMXBean
     mxBean.getInputArguments.asScala.exists(_.contains("jdwp"))
-

@@ -57,4 +57,3 @@ class TestingDecoder(mainEntry: ClasspathEntry, val classLoader: BinaryClassLoad
       }
       .get
     classNames.map(classLoader.loadClass)
-

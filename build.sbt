@@ -1,4 +1,3 @@
-
 lazy val decoder: Project = project
   .in(file("."))
   .settings(
@@ -10,9 +9,9 @@ lazy val decoder: Project = project
       Dependencies.asm,
       Dependencies.asmUtil,
       Dependencies.munit % Test,
-      Dependencies.coursier  % Test,
+      Dependencies.coursier % Test,
       Dependencies.coursierJvm % Test
     ),
     Test / fork := true,
-    Test / testOptions += Tests.Argument(TestFrameworks.MUnit, "+l"),
+    Test / testOptions += Tests.Argument(TestFrameworks.MUnit, "+l")
   )
