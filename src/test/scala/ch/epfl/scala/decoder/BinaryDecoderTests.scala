@@ -1,12 +1,12 @@
 package ch.epfl.scala.decoder
 
-import ch.epfl.scala.decoder.ScalaVersion
-import ch.epfl.scala.decoder.testfmk.TestingDebuggee
-import scala.util.Properties
+import ch.epfl.scala.decoder.testutils.*
 import tastyquery.Exceptions.*
 
-class Scala31PlusBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.1+`)
-class Scala34PlusBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.4+`)
+import scala.util.Properties
+
+class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts`)
+class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
   def isScala33 = scalaVersion.isScala33
@@ -908,7 +908,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |object Main {
          |  def fac(x: Int): Int = {
          |    def rec(x: Int, acc: Int): Int = {
-         |      if (x <= 0) acc
+         |      if x <= 0 then acc
          |      else rec(x - 1, acc * x)
          |    }
          |    rec(x, 1)
@@ -1026,9 +1026,9 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |def foo: String = ???
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    decoder.assertDecode("example.decoder$package$", "java.lang.String foo()", "example.foo: String")
+    decoder.assertDecode("example.Test$package$", "java.lang.String foo()", "example.foo: String")
     decoder.assertDecode(
-      "example.decoder$package",
+      "example.Test$package",
       "java.lang.String foo()",
       "example.foo.<static forwarder>: String",
       generated = true
@@ -1375,8 +1375,8 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |  @scala.annotation.varargs
          |  def m(args: String*): Int = args.size
          |""".stripMargin
-    val javaModule = TestingDebuggee.fromJavaSource(javaSource, "example", scalaVersion).mainModule
-    val decoder = TestingDecoder(source, scalaVersion, Seq(javaModule))
+    val javaModule = Module.fromJavaSource(javaSource, scalaVersion)
+    val decoder = TestingDecoder(source, scalaVersion, javaModule.classpath)
     decoder.assertDecode(
       "example.B",
       "java.lang.String m(java.lang.Object[] args)",

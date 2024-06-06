@@ -9,7 +9,9 @@ lazy val decoder: Project = project
       Dependencies.tastyQuery,
       Dependencies.asm,
       Dependencies.asmUtil,
-      Dependencies.munit % Test
+      Dependencies.munit % Test,
+      Dependencies.coursier  % Test,
+      Dependencies.coursierJvm % Test
     ),
     Test / fork := true,
     Test / testOptions += Tests.Argument(TestFrameworks.MUnit, "+l"),

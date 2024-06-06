@@ -1,16 +1,14 @@
 package ch.epfl.scala.decoder
 
+import ch.epfl.scala.decoder.testutils.*
+import coursier.maven.MavenRepository
+
 import java.io.PrintWriter
 import java.nio.file.Paths
 import scala.collection.mutable
 import scala.io.Source
 import scala.util.Properties
 import scala.util.Random
-import coursier.maven.MavenRepository
-import ch.epfl.scala.decoder.testfmk.FetchOptions
-import ch.epfl.scala.decoder.testfmk.TestingResolver
-import coursier.error.ResolutionError
-import ch.epfl.scala.decoder.Library
 
 class BinaryDecoderStatsFull extends BinaryDecoderSuite:
   lazy val file = Paths.get(s"test-result-${Random.nextInt(Int.MaxValue)}.txt")

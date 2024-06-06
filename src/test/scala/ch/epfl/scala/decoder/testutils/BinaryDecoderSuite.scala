@@ -1,13 +1,9 @@
-package ch.epfl.scala.decoder
+package ch.epfl.scala.decoder.testutils
 
 import ch.epfl.scala.decoder.*
-import ch.epfl.scala.decoder.internal.IO
 import ch.epfl.scala.decoder.binary
+import ch.epfl.scala.decoder.internal.isGenerated
 import ch.epfl.scala.decoder.javareflect.*
-import ch.epfl.scala.decoder.testfmk.CommonFunSuite
-import ch.epfl.scala.decoder.testfmk.FetchOptions
-import ch.epfl.scala.decoder.testfmk.TestingDebuggee
-import ch.epfl.scala.decoder.testfmk.TestingResolver
 
 import java.nio.file.*
 import scala.collection.mutable
@@ -27,15 +23,14 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       version: String,
       fetchOptions: FetchOptions = FetchOptions.default
   )(using ThrowOrWarn): TestingDecoder =
-    val libraries = TestingResolver.fetch(groupId, artifactId, version, fetchOptions)
-    initDecoder(libraries, artifactId, version)
+    val libraries = Resolver.fetch(groupId, artifactId, version, fetchOptions)
+    initDecoder(libraries, artifactId)
 
-  def initDecoder(libraries: Seq[Library], artifactId: String, version: String)(using ThrowOrWarn): TestingDecoder =
-    val library = libraries.find(l => l.name.startsWith(artifactId.stripSuffix("_3")) && l.version == version).get
+  def initDecoder(libraries: Seq[ClasspathEntry], artifactId: String)(using ThrowOrWarn): TestingDecoder =
+    val library = libraries.find(l => l.name.startsWith(artifactId)).get
     TestingDecoder(library, libraries)
 
   extension (decoder: TestingDecoder)
-
     def assertDecode(className: String, expected: String)(using munit.Location): Unit =
       val cls = decoder.classLoader.loadClass(className)
       val decodedClass = decoder.decode(cls)

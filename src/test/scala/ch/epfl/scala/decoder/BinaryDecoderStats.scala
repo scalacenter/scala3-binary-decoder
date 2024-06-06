@@ -1,7 +1,8 @@
 package ch.epfl.scala.decoder
 
-import ch.epfl.scala.decoder.testfmk.FetchOptions
+import ch.epfl.scala.decoder.testutils.*
 import coursier.maven.MavenRepository
+
 import scala.concurrent.duration.*
 
 class BinaryDecoderStats extends BinaryDecoderSuite:
