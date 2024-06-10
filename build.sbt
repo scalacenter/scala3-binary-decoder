@@ -9,7 +9,7 @@ inThisBuild(
     onLoadMessage := s"Welcome to scala3-binary-decoder ${version.value}",
     licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")),
     developers := Developers.all,
-    version ~= { dynVer => if (isRelease) dynVer else "0.1.0-SNAPSHOT" }
+    version ~= { dynVer => if (isRelease) dynVer else "1.0.0-SNAPSHOT" }
   )
 )
 
