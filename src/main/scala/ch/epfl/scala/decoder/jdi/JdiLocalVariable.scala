@@ -2,7 +2,7 @@ package ch.epfl.scala.decoder.jdi
 
 import ch.epfl.scala.decoder.binary.*
 
-class JdiLocalVariable(obj: Any) extends JavaReflection(obj, "com.sun.jdi.LocalVariable") with Parameter:
-  override def name: String = invokeMethod("name")
+class JdiLocalVariable(localVariable: com.sun.jdi.LocalVariable) extends Parameter:
+  override def name: String = localVariable.name
   override def sourceLines: Option[SourceLines] = None
-  override def `type`: Type = JdiType(invokeMethod("type"))
+  override def `type`: Type = JdiType(localVariable.`type`)
