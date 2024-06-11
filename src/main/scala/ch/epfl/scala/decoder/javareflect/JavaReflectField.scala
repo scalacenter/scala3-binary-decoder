@@ -13,3 +13,5 @@ class JavaReflectField(field: Field, loader: JavaReflectLoader) extends binary.F
 
   override def `type`: binary.Type =
     loader.loadClass(field.getType)
+
+  override def toString: String = field.toString

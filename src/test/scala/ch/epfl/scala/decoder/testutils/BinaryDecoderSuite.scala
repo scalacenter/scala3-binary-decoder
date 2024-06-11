@@ -44,6 +44,14 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       assertEquals(formatter.format(decodedMethod), expected)
       assertEquals(decodedMethod.isGenerated, generated)
 
+    def assertDecodeField(className: String, field: String, expected: String, generated: Boolean = false)(using
+        munit.Location
+    ): Unit =
+      val binaryField: binary.Field = loadBinaryField(className, field)
+      val decodedField = decoder.decode(binaryField)
+      assertEquals(formatter.format(decodedField), expected)
+      assertEquals(decodedField.isGenerated, generated)
+
     def assertNotFound(declaringType: String, javaSig: String)(using munit.Location): Unit =
       val method = loadBinaryMethod(declaringType, javaSig)
       intercept[NotFoundException](decoder.decode(method))
@@ -106,6 +114,16 @@ trait BinaryDecoderSuite extends CommonFunSuite:
             |""".stripMargin + binaryMethods.map(m => s"        " + formatMethod(m)).mkString("\n")
       binaryMethods.find(m => formatMethod(m) == method).getOrElse(throw new NoSuchElementException(notFoundMessage))
 
+    private def loadBinaryField(declaringType: String, field: String)(using
+        munit.Location
+    ): binary.Field =
+      val binaryFields = decoder.classLoader.loadClass(declaringType).declaredFields
+      def notFoundMessage: String =
+        s"""|$field
+            |    Available binary fields in $declaringType are:
+            |""".stripMargin + binaryFields.map(f => s"        " + formatField(f)).mkString("\n")
+      binaryFields.find(f => formatField(f) == field).getOrElse(throw new NoSuchElementException(notFoundMessage))
+
     private def tryDecode(cls: binary.ClassType, counter: Counter): Option[DecodedClass] =
       try
         val sym = decoder.decode(cls)
@@ -142,6 +160,9 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     val returnType = m.returnType.map(_.name).get
     val parameters = m.allParameters.map(p => p.`type`.name + " " + p.name).mkString(", ")
     s"$returnType ${m.name}($parameters)"
+
+  private def formatField(f: binary.Field): String =
+    s"${f.`type`.name} ${f.name}"
 
   case class ExpectedCount(success: Int, ambiguous: Int = 0, notFound: Int = 0, throwables: Int = 0)
 

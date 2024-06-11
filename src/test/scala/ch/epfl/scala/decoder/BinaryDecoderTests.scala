@@ -12,6 +12,37 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("public and private fields") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  var x: Int = 1
+         |  var `val`: Int = 1
+         |  private val y: String = "y"
+         |  lazy val z: Int = 2
+         |
+         |  def foo: String = y
+         |}
+         |
+         |object A {
+         |  val z: Int = 2
+         |  private var w: String = "w"
+         |  private lazy val v: Int = 3
+         |
+         |  def bar: String = w + v
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A", "int x", "A.x: Int")
+    decoder.assertDecodeField("example.A", "int val", "A.val: Int")
+    decoder.assertDecodeField("example.A", "java.lang.String y", "A.y: String")
+    decoder.assertDecodeField("example.A", "java.lang.Object z$lzy1", "A.z: Int")
+    decoder.assertDecodeField("example.A$", "int z", "A.z: Int")
+    decoder.assertDecodeField("example.A$", "java.lang.String w", "A.w: String")
+    decoder.assertDecodeField("example.A$", "java.lang.Object v$lzy1", "A.v: Int")
+  }
+
   test("mixin and static forwarders") {
     val source =
       """|package example

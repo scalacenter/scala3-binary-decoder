@@ -15,6 +15,10 @@ object Patterns:
         .filter(xs => xs(1) != "anon")
         .map(xs => (xs(0), xs(1), Option(xs(2)).map(_.stripPrefix("$")).filter(_.nonEmpty)))
 
+  object LazyVal:
+    def unapply(field: binary.Field): Option[String] =
+      """(.*)\$lzy\d+""".r.unapplySeq(field.name).map(xs => xs(0).stripSuffix("$"))
+
   object AnonClass:
     def unapply(cls: binary.ClassType): Option[(String, Option[String])] =
       val decodedClassName = NameTransformer.decode(cls.name.split('.').last)

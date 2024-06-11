@@ -307,3 +307,8 @@ extension (method: DecodedMethod)
       case _: DecodedMethod.SAMOrPartialFunctionConstructor => true
       case method: DecodedMethod.InlinedMethod => method.underlying.isGenerated
       case _ => false
+
+extension (field: DecodedField)
+  def isGenerated: Boolean =
+    field match
+      case field: DecodedField.ValDef => false

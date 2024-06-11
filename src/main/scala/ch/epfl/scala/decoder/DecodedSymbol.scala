@@ -160,3 +160,14 @@ object DecodedMethod:
     override def toString: String =
       if underlying.isInstanceOf[InlinedMethod] then underlying.toString
       else s"$underlying (inlined)"
+
+sealed trait DecodedField extends DecodedSymbol:
+  def owner: DecodedClass
+  override def symbolOpt: Option[TermSymbol] = None
+  def declaredType: TypeOrMethodic
+
+object DecodedField:
+  final class ValDef(val owner: DecodedClass, val symbol: TermSymbol) extends DecodedField:
+    override def declaredType: TypeOrMethodic = symbol.declaredType
+    override def symbolOpt: Option[TermSymbol] = Some(symbol)
+    override def toString: String = s"ValDef($owner, ${symbol.showBasic})"

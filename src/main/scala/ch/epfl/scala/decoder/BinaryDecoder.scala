@@ -107,6 +107,23 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     candidates.singleOrThrow(method)
   end decode
 
+  def decode(field: binary.Field): DecodedField =
+    val decodedClass = decode(field.declaringClass)
+    decode(decodedClass, field)
+
+  def decode(decodedClass: DecodedClass, field: binary.Field): DecodedField =
+    val decodedFields = field match
+      case Patterns.LazyVal(name) =>
+        decodedClass.declarations.collect {
+          case sym: TermSymbol if sym.nameStr == name => DecodedField.ValDef(decodedClass, sym)
+        }
+      case _ =>
+        decodedClass.declarations.collect {
+          case sym: TermSymbol if matchTargetName(field, sym) => DecodedField.ValDef(decodedClass, sym)
+        }
+    decodedFields.singleOrThrow(field)
+  end decode
+
   private def reduceAmbiguityOnClasses(syms: Seq[DecodedClass]): Seq[DecodedClass] =
     if syms.size > 1 then
       val reduced = syms.filterNot(sym => syms.exists(enclose(sym, _)))
@@ -822,6 +839,9 @@ class BinaryDecoder(using Context, ThrowOrWarn):
 
   private def matchTargetName(method: binary.Method, symbol: TermSymbol): Boolean =
     method.unexpandedDecodedNames.map(_.stripSuffix("$")).contains(symbol.targetNameStr)
+
+  private def matchTargetName(field: binary.Field, symbol: TermSymbol): Boolean =
+    field.unexpandedDecodedNames.map(_.stripSuffix("$")).contains(symbol.targetNameStr)
 
   private case class SourceParams(
       declaredParamNames: Seq[UnsignedTermName],

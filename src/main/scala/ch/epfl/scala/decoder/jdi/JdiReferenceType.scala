@@ -28,6 +28,8 @@ class JdiReferenceType(obj: Any, className: String = "com.sun.jdi.ReferenceType"
 
   override def declaredField(name: String): Option[Field] = None
 
+  override def declaredFields: Seq[Field] = Seq.empty
+
   def asClass: JdiClassType = JdiClassType(obj)
   def asInterface: JdiInterfaceType = JdiInterfaceType(obj)
   def constantPool: ConstantPool = ConstantPool(invokeMethod("constantPool"))
