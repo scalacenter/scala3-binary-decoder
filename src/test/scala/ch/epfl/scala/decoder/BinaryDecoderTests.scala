@@ -43,6 +43,30 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     decoder.assertDecodeField("example.A$", "java.lang.Object v$lzy1", "A.v: Int")
   }
 
+  test("public and private objects") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  object B
+         |  private object C
+         |}
+         |
+         |object A {
+         |  object D
+         |  private object E
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A", "java.lang.Object B$lzy1", "A.B: B")
+    decoder.assertDecodeField("example.A", "java.lang.Object C$lzy1", "A.C: C")
+    decoder.assertDecodeField("example.A$", "example.A$ MODULE$", "A: A")
+    decoder.assertDecodeField("example.A$", "example.A$D$ D", "A.D: D")
+    decoder.assertDecodeField("example.A$D$", "example.A$D$ MODULE$", "A.D: D")
+    decoder.assertDecodeField("example.A$", "example.A$E$ E", "A.E: E")
+    decoder.assertDecodeField("example.A$E$", "example.A$E$ MODULE$", "A.E: E")
+  }
+
   test("mixin and static forwarders") {
     val source =
       """|package example

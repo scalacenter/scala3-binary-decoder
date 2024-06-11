@@ -117,6 +117,8 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         decodedClass.declarations.collect {
           case sym: TermSymbol if sym.nameStr == name => DecodedField.ValDef(decodedClass, sym)
         }
+      case Patterns.Module() =>
+        decodedClass.classSymbol.toSeq.flatMap(_.moduleValue).map(DecodedField.ValDef(decodedClass, _))
       case _ =>
         decodedClass.declarations.collect {
           case sym: TermSymbol if matchTargetName(field, sym) => DecodedField.ValDef(decodedClass, sym)

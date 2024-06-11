@@ -31,6 +31,10 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     TestingDecoder(library, libraries)
 
   extension (decoder: TestingDecoder)
+    def showFields(className: String): Unit =
+      val fields = decoder.classLoader.loadClass(className).declaredFields
+      println(s"Available binary fields in $className are:\n" + fields.map(f => s"  " + formatField(f)).mkString("\n"))
+
     def assertDecode(className: String, expected: String)(using munit.Location): Unit =
       val cls = decoder.classLoader.loadClass(className)
       val decodedClass = decoder.decode(cls)

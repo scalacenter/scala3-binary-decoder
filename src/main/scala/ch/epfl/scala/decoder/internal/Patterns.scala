@@ -15,10 +15,6 @@ object Patterns:
         .filter(xs => xs(1) != "anon")
         .map(xs => (xs(0), xs(1), Option(xs(2)).map(_.stripPrefix("$")).filter(_.nonEmpty)))
 
-  object LazyVal:
-    def unapply(field: binary.Field): Option[String] =
-      """(.*)\$lzy\d+""".r.unapplySeq(field.name).map(xs => xs(0).stripSuffix("$"))
-
   object AnonClass:
     def unapply(cls: binary.ClassType): Option[(String, Option[String])] =
       val decodedClassName = NameTransformer.decode(cls.name.split('.').last)
@@ -138,6 +134,16 @@ object Patterns:
           // strip $i1 suffix if exists
           "(.+)\\$i\\d+".r.unapplySeq(xs(0)).map(_(0)).getOrElse(xs(0))
         }
+
+  object LazyVal:
+    def unapply(field: binary.Field): Option[String] =
+      """(.*)\$lzy\d+""".r.unapplySeq(field.name).map(xs => xs(0).stripSuffix("$"))
+
+  object Module:
+    def unapply(field: binary.Field): Boolean =
+      field.name match
+        case "MODULE$" => true
+        case _ => false
 
   extension (method: binary.Method)
     private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =
