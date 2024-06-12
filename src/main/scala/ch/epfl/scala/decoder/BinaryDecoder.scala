@@ -128,7 +128,7 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           .toSeq
       case _ =>
         decodedClass.declarations.collect {
-          case sym: TermSymbol if matchTargetName(field, sym) => DecodedField.ValDef(decodedClass, sym)
+          case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => DecodedField.ValDef(decodedClass, sym)
         }
     decodedFields.singleOrThrow(field)
   end decode

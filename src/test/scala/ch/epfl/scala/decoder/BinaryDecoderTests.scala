@@ -12,6 +12,21 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("ambiguous Object/ImplicitClass fields") {
+    val source =
+      """|package example
+         |
+         |object A {
+         |  object B
+         |
+         |  implicit class B (val x: Int) 
+         |
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A$", "example.A$B$ B", "A.B: B")
+  }
+
   test("public and private fields") {
     val source =
       """|package example
