@@ -60,11 +60,13 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     val decoder = TestingDecoder(source, scalaVersion)
     decoder.assertDecodeField("example.A", "java.lang.Object B$lzy1", "A.B: B")
     decoder.assertDecodeField("example.A", "java.lang.Object C$lzy1", "A.C: C")
-    decoder.assertDecodeField("example.A$", "example.A$ MODULE$", "A: A")
+    decoder.assertDecodeField("example.A$", "example.A$ MODULE$", "A: A", true)
+    decoder.assertDecodeField("example.A", "long OFFSET$1", "A.<offset 1>: Long", true)
+    decoder.assertDecodeField("example.A", "long OFFSET$0", "A.<offset 0>: Long", true)
     decoder.assertDecodeField("example.A$", "example.A$D$ D", "A.D: D")
-    decoder.assertDecodeField("example.A$D$", "example.A$D$ MODULE$", "A.D: D")
+    decoder.assertDecodeField("example.A$D$", "example.A$D$ MODULE$", "A.D: D", true)
     decoder.assertDecodeField("example.A$", "example.A$E$ E", "A.E: E")
-    decoder.assertDecodeField("example.A$E$", "example.A$E$ MODULE$", "A.E: E")
+    decoder.assertDecodeField("example.A$E$", "example.A$E$ MODULE$", "A.E: E", true)
   }
 
   test("mixin and static forwarders") {

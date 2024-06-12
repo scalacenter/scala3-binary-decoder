@@ -67,10 +67,13 @@ class StackTraceFormatter(using ThrowOrWarn):
       case method: DecodedMethod.InlinedMethod => formatOwner(method.underlying)
 
   private def formatOwner(field: DecodedField): String =
-    formatOwner(field.symbolOpt.get)
+    format(field.owner)
 
   private def formatName(field: DecodedField): String =
-    formatName(field.symbolOpt.get)
+    field match
+      case field: DecodedField.ValDef => formatName(field.symbol)
+      case field: DecodedField.ModuleVal => ""
+      case field: DecodedField.LazyValOffset => "<offset " + field.ind + ">"
 
   private def formatName(method: DecodedMethod): String =
     method match

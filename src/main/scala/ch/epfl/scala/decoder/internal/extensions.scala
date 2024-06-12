@@ -312,3 +312,5 @@ extension (field: DecodedField)
   def isGenerated: Boolean =
     field match
       case field: DecodedField.ValDef => false
+      case field: DecodedField.ModuleVal => true
+      case field: DecodedField.LazyValOffset => true

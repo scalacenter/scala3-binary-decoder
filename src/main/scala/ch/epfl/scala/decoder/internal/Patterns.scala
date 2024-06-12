@@ -145,6 +145,10 @@ object Patterns:
         case "MODULE$" => true
         case _ => false
 
+  object Offset:
+    def unapply(field: binary.Field): Option[Int] =
+      """^OFFSET\$(\d+)$""".r.unapplySeq(field.name).map(xs => xs(0).toInt)
+
   extension (method: binary.Method)
     private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =
       val extracted = method.unexpandedDecodedNames

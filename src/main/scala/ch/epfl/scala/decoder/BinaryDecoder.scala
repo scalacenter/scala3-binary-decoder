@@ -118,7 +118,9 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           case sym: TermSymbol if sym.nameStr == name => DecodedField.ValDef(decodedClass, sym)
         }
       case Patterns.Module() =>
-        decodedClass.classSymbol.toSeq.flatMap(_.moduleValue).map(DecodedField.ValDef(decodedClass, _))
+        decodedClass.classSymbol.toSeq.flatMap(_.moduleValue).map(DecodedField.ModuleVal(decodedClass, _))
+      case Patterns.Offset(nbr) =>
+        Seq(DecodedField.LazyValOffset(decodedClass, nbr, defn.LongType))
       case _ =>
         decodedClass.declarations.collect {
           case sym: TermSymbol if matchTargetName(field, sym) => DecodedField.ValDef(decodedClass, sym)

@@ -168,6 +168,15 @@ sealed trait DecodedField extends DecodedSymbol:
 
 object DecodedField:
   final class ValDef(val owner: DecodedClass, val symbol: TermSymbol) extends DecodedField:
-    override def declaredType: TypeOrMethodic = symbol.declaredType
+    def declaredType: TypeOrMethodic = symbol.declaredType
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
     override def toString: String = s"ValDef($owner, ${symbol.showBasic})"
+
+  final class ModuleVal(val owner: DecodedClass, val symbol: TermSymbol) extends DecodedField:
+    def declaredType: TypeOrMethodic = symbol.declaredType
+    override def symbolOpt: Option[TermSymbol] = Some(symbol)
+    override def toString: String = s"ModuleVal($owner, ${symbol.showBasic})"
+
+  final class LazyValOffset(val owner: DecodedClass, index: Int, val declaredType: Type) extends DecodedField:
+    def ind: Int = index
+    override def toString: String = s"LazyValOffset($owner, $index)"
