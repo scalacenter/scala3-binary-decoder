@@ -69,6 +69,48 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     decoder.assertDecodeField("example.A$E$", "example.A$E$ MODULE$", "A.E: E", true)
   }
 
+  test("outer field") {
+    val source =
+      """|package example
+         |
+         |class A[T](x: T){
+         |  class B {
+         |    def foo: T = x
+         |  }
+         |
+         |  def bar: T = {
+         |    class C {
+         |      def foo: T = x
+         |    }
+         |    (new C).foo
+         |  }
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A", "java.lang.Object example$A$$x", "A.x: T")
+    decoder.assertDecodeField("example.A$B", "example.A $outer", "A.B.<outer>: A[T]", generated = true)
+    decoder.assertDecodeField("example.A$C$1", "example.A $outer", "A.bar.C.<outer>: A[T]", generated = true)
+  }
+
+  test("intricated outer fields") {
+    val source =
+      """|package example
+         |
+         |trait A {
+         |  class X
+         |}
+         |
+         |trait B extends A {
+         |  class Y {
+         |    class Z extends X
+         |  }
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A$X", "example.A $outer", "A.X.<outer>: A", generated = true)
+    decoder.assertDecodeField("example.B$Y$Z", "example.B$Y $outer", "B.Y.Z.<outer>: Y", generated = true)
+  }
+
   test("mixin and static forwarders") {
     val source =
       """|package example
@@ -285,7 +327,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     decoder.assertDecode("example.B", "java.lang.String m()", "B.m(): String")
   }
 
-  test("find outter field") {
+  test("outer accessors") {
     val source =
       """|package example
          |class A:

@@ -140,14 +140,14 @@ object Patterns:
       """(.*)\$lzy\d+""".r.unapplySeq(field.name).map(xs => xs(0).stripSuffix("$"))
 
   object Module:
-    def unapply(field: binary.Field): Boolean =
-      field.name match
-        case "MODULE$" => true
-        case _ => false
+    def unapply(field: binary.Field): Boolean = field.name == "MODULE$"
 
   object Offset:
     def unapply(field: binary.Field): Option[Int] =
       """^OFFSET\$(\d+)$""".r.unapplySeq(field.name).map(xs => xs(0).toInt)
+
+  object OuterField:
+    def unapply(field: binary.Field): Boolean = field.name == "$outer"
 
   extension (method: binary.Method)
     private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =

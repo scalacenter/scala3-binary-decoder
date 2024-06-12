@@ -73,7 +73,8 @@ class StackTraceFormatter(using ThrowOrWarn):
     field match
       case field: DecodedField.ValDef => formatName(field.symbol)
       case field: DecodedField.ModuleVal => ""
-      case field: DecodedField.LazyValOffset => "<offset " + field.ind + ">"
+      case field: DecodedField.LazyValOffset => "<offset " + field.index + ">"
+      case field: DecodedField.Outer => "<outer>"
 
   private def formatName(method: DecodedMethod): String =
     method match

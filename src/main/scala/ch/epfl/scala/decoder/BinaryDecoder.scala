@@ -118,9 +118,14 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           case sym: TermSymbol if sym.nameStr == name => DecodedField.ValDef(decodedClass, sym)
         }
       case Patterns.Module() =>
-        decodedClass.classSymbol.toSeq.flatMap(_.moduleValue).map(DecodedField.ModuleVal(decodedClass, _))
+        decodedClass.classSymbol.flatMap(_.moduleValue).map(DecodedField.ModuleVal(decodedClass, _)).toSeq
       case Patterns.Offset(nbr) =>
         Seq(DecodedField.LazyValOffset(decodedClass, nbr, defn.LongType))
+      case Patterns.OuterField() =>
+        decodedClass.symbolOpt
+          .flatMap(_.outerClass)
+          .map(outerClass => DecodedField.Outer(decodedClass, outerClass.selfType))
+          .toSeq
       case _ =>
         decodedClass.declarations.collect {
           case sym: TermSymbol if matchTargetName(field, sym) => DecodedField.ValDef(decodedClass, sym)
@@ -497,13 +502,8 @@ class BinaryDecoder(using Context, ThrowOrWarn):
       .map(target => DecodedMethod.TraitStaticForwarder(decode(decodedClass, target)))
 
   private def decodeOuter(decodedClass: DecodedClass): Option[DecodedMethod.OuterAccessor] =
-    def outerClass(sym: Symbol): Option[ClassSymbol] =
-      sym.owner match
-        case null => None
-        case owner if owner.isClass => Some(owner.asClass)
-        case owner => outerClass(owner)
     decodedClass.symbolOpt
-      .flatMap(outerClass)
+      .flatMap(_.outerClass)
       .map(outerClass => DecodedMethod.OuterAccessor(decodedClass, outerClass.thisType))
 
   private def decodeTraitInitializer(

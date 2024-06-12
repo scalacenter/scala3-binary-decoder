@@ -177,6 +177,8 @@ object DecodedField:
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
     override def toString: String = s"ModuleVal($owner, ${symbol.showBasic})"
 
-  final class LazyValOffset(val owner: DecodedClass, index: Int, val declaredType: Type) extends DecodedField:
-    def ind: Int = index
+  final class LazyValOffset(val owner: DecodedClass, val index: Int, val declaredType: Type) extends DecodedField:
     override def toString: String = s"LazyValOffset($owner, $index)"
+
+  final class Outer(val owner: DecodedClass, val declaredType: Type) extends DecodedField:
+    override def toString: String = s"Outer($owner, ${declaredType.showBasic})"
