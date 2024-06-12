@@ -144,7 +144,7 @@ object Patterns:
 
   object Offset:
     def unapply(field: binary.Field): Option[Int] =
-      """^OFFSET\$(\d+)$""".r.unapplySeq(field.name).map(xs => xs(0).toInt)
+      """OFFSET\$(?:_m_)?(\d+)""".r.unapplySeq(field.name).map(xs => xs(0).toInt)
 
   object OuterField:
     def unapply(field: binary.Field): Boolean = field.name == "$outer"
