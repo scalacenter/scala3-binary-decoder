@@ -129,6 +129,13 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           .flatMap(_.outerClass)
           .map(outerClass => DecodedField.Outer(decodedClass, outerClass.selfType))
           .toSeq
+      case _ if field.isStatic && decodedClass.isJava =>
+        for
+          owner <- decodedClass.companionClassSymbol.toSeq ++ decodedClass.linearization.filter(_.isTrait)
+          sym <- owner.declarations.collect {
+            case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => sym
+          }
+        yield DecodedField.ValDef(decodedClass, sym)
       case _ =>
         for
           owner <- decodedClass.classSymbol.toSeq ++ decodedClass.linearization.filter(_.isTrait)
