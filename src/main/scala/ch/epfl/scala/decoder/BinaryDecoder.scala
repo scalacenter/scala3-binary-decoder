@@ -129,7 +129,14 @@ class BinaryDecoder(using Context, ThrowOrWarn):
       case _ =>
         decodedClass.declarations.collect {
           case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => DecodedField.ValDef(decodedClass, sym)
-        }
+        } ++
+          (for
+            traitSym <- decodedClass.linearization.filter(_.isTrait)
+            if field.decodedName.contains("$" + traitSym.nameStr + "$")
+            sym <- traitSym.declarations.collect {
+              case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => sym
+            }
+          yield DecodedField.ValDef(decodedClass, sym))
     decodedFields.singleOrThrow(field)
   end decode
 

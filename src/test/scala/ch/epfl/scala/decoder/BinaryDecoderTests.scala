@@ -12,6 +12,27 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("extend traits with val fields") {
+    val source =
+      """|package example
+         |
+         |trait A {
+         |  private val x: Int = 1
+         |  private val y: Int = 2
+         |}
+         |
+         |class B extends A {
+         |  val y: Int = 2
+         |}
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.B", "int example$A$$x", "B.x: Int")
+    decoder.assertDecodeField("example.B", "int y", "B.y: Int")
+    // TODO fix
+    // decoder.assertDecodeField("example.B", "int example$A$$y", "B.y: Int")
+  }
+
   test("notFound offset_m field") {
     val source =
       """|package example
