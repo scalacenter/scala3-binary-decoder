@@ -12,6 +12,19 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("extend trait with given fields") {
+    val source =
+      """|package example
+         |
+         |trait A:
+         |  given x: Int = 1
+         |
+         |class C extends A     
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.C", "java.lang.Object x$lzy1", "C.x: Int")
+  }
+
   test("extend traits with val fields") {
     val source =
       """|package example
@@ -19,6 +32,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |trait A {
          |  private val x: Int = 1
          |  private val y: Int = 2
+         |  val z: Int = 3
          |}
          |
          |class B extends A {

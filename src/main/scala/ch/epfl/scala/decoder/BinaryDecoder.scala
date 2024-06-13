@@ -114,9 +114,12 @@ class BinaryDecoder(using Context, ThrowOrWarn):
   def decode(decodedClass: DecodedClass, field: binary.Field): DecodedField =
     val decodedFields = field match
       case Patterns.LazyVal(name) =>
-        decodedClass.declarations.collect {
-          case sym: TermSymbol if sym.nameStr == name => DecodedField.ValDef(decodedClass, sym)
-        }
+        for
+          owner <- decodedClass.classSymbol.toSeq ++ decodedClass.linearization.filter(_.isTrait)
+          sym <- owner.declarations.collect {
+            case sym: TermSymbol if sym.nameStr == name && sym.isModuleOrLazyVal => sym
+          }
+        yield DecodedField.ValDef(decodedClass, sym)
       case Patterns.Module() =>
         decodedClass.classSymbol.flatMap(_.moduleValue).map(DecodedField.ModuleVal(decodedClass, _)).toSeq
       case Patterns.Offset(nbr) =>
@@ -127,16 +130,12 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           .map(outerClass => DecodedField.Outer(decodedClass, outerClass.selfType))
           .toSeq
       case _ =>
-        decodedClass.declarations.collect {
-          case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => DecodedField.ValDef(decodedClass, sym)
-        } ++
-          (for
-            traitSym <- decodedClass.linearization.filter(_.isTrait)
-            if field.decodedName.contains("$" + traitSym.nameStr + "$")
-            sym <- traitSym.declarations.collect {
-              case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => sym
-            }
-          yield DecodedField.ValDef(decodedClass, sym))
+        for
+          owner <- decodedClass.classSymbol.toSeq ++ decodedClass.linearization.filter(_.isTrait)
+          sym <- owner.declarations.collect {
+            case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => sym
+          }
+        yield DecodedField.ValDef(decodedClass, sym)
     decodedFields.singleOrThrow(field)
   end decode
 
