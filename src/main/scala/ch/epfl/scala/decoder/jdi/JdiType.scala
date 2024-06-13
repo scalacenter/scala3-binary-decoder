@@ -1,6 +1,6 @@
 package ch.epfl.scala.decoder.jdi
 import ch.epfl.scala.decoder.binary.*
 
-class JdiType(obj: Any, className: String = "com.sun.jdi.Type") extends JavaReflection(obj, className) with Type:
-  override def name: String = invokeMethod("name")
+class JdiType(tpe: com.sun.jdi.Type) extends Type:
+  override def name: String = tpe.name
   override def sourceLines: Option[SourceLines] = None
