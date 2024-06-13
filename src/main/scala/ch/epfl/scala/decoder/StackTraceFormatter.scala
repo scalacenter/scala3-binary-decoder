@@ -75,6 +75,7 @@ class StackTraceFormatter(using ThrowOrWarn):
       case field: DecodedField.ModuleVal => ""
       case field: DecodedField.LazyValOffset => "<offset " + field.index + ">"
       case field: DecodedField.Outer => "<outer>"
+      case field: DecodedField.SerialVersionUID => "<serialVersionUID>"
 
   private def formatName(method: DecodedMethod): String =
     method match

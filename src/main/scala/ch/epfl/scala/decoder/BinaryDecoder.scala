@@ -129,6 +129,8 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           .flatMap(_.outerClass)
           .map(outerClass => DecodedField.Outer(decodedClass, outerClass.selfType))
           .toSeq
+      case Patterns.SerialVersionUID() =>
+        Seq(DecodedField.SerialVersionUID(decodedClass, defn.LongType))
       case _ if field.isStatic && decodedClass.isJava =>
         for
           owner <- decodedClass.companionClassSymbol.toSeq ++ decodedClass.linearization.filter(_.isTrait)

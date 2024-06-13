@@ -149,6 +149,9 @@ object Patterns:
   object OuterField:
     def unapply(field: binary.Field): Boolean = field.name == "$outer"
 
+  object SerialVersionUID:
+    def unapply(field: binary.Field): Boolean = field.name == "serialVersionUID"
+
   extension (method: binary.Method)
     private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =
       val extracted = method.unexpandedDecodedNames

@@ -182,3 +182,6 @@ object DecodedField:
 
   final class Outer(val owner: DecodedClass, val declaredType: Type) extends DecodedField:
     override def toString: String = s"Outer($owner, ${declaredType.showBasic})"
+
+  final class SerialVersionUID(val owner: DecodedClass, val declaredType: Type) extends DecodedField:
+    override def toString: String = s"SerialVersionUID($owner)"

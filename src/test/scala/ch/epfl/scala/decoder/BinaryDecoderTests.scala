@@ -12,6 +12,17 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("serialVersionUID fields") {
+    val source =
+      """|package example
+         |
+         |@SerialVersionUID(1L)
+         |class A
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A", "long serialVersionUID", "A.<serialVersionUID>: Long", generated = true)
+  }
+
   test("static fields in static classes Java") {
     val source =
       """|package example;
