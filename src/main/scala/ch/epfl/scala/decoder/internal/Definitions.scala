@@ -15,6 +15,7 @@ class Definitions(using ctx: Context):
   val PartialFunctionClass = scalaPackage.getDecl(typeName("PartialFunction")).get.asClass
   val AbstractPartialFunctionClass = scalaRuntimePackage.getDecl(typeName("AbstractPartialFunction")).get.asClass
   val SerializableClass = javaIoPackage.getDecl(typeName("Serializable")).get.asClass
+  val javaLangEnumClass = javaLangPackage.getDecl(typeName("Enum")).get.asClass
 
   val SerializedLambdaType: Type = TypeRef(javaLangInvokePackage.packageRef, typeName("SerializedLambda"))
   val DeserializeLambdaType = MethodType(List(SimpleName("arg0")), List(SerializedLambdaType), ObjectType)

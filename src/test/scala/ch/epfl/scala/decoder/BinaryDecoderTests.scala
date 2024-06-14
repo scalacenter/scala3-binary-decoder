@@ -12,6 +12,18 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("case field in JavaLangEnum") {
+    val source =
+      """|package example
+         |
+         |enum A extends java.lang.Enum[A] :
+         |  case B
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A", "example.A B", "A.B: A")
+  }
+
   test("serialVersionUID fields") {
     val source =
       """|package example

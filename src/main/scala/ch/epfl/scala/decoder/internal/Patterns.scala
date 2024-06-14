@@ -137,7 +137,7 @@ object Patterns:
 
   object LazyVal:
     def unapply(field: binary.Field): Option[String] =
-      """(.*)\$lzy\d+""".r.unapplySeq(field.name).map(xs => xs(0).stripSuffix("$"))
+      """(.*)\$lzy\d+""".r.unapplySeq(field.decodedName).map(xs => xs(0).stripSuffix("$"))
 
   object Module:
     def unapply(field: binary.Field): Boolean = field.name == "MODULE$"

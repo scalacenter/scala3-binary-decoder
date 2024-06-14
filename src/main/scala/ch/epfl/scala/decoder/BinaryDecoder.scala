@@ -133,14 +133,12 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         Seq(DecodedField.SerialVersionUID(decodedClass, defn.LongType))
       case _ if field.isStatic && decodedClass.isJava =>
         for
-          owner <- decodedClass.companionClassSymbol.toSeq ++ decodedClass.linearization.filter(_.isTrait)
-          sym <- owner.declarations.collect {
-            case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => sym
-          }
+          owner <- decodedClass.companionClassSymbol.toSeq
+          sym <- owner.declarations.collect { case sym: TermSymbol if sym.nameStr == field.name => sym }
         yield DecodedField.ValDef(decodedClass, sym)
       case _ =>
         for
-          owner <- decodedClass.classSymbol.toSeq ++ decodedClass.linearization.filter(_.isTrait)
+          owner <- withCompanionIfExtendsJavaLangEnum(decodedClass) ++ decodedClass.linearization.filter(_.isTrait)
           sym <- owner.declarations.collect {
             case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => sym
           }
@@ -652,11 +650,18 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         DecodedMethod.MixinForwarder(decodedClass, staticForwarder.target)
       }
 
-  private def withCompanionIfExtendsAnyVal(cls: ClassSymbol): Seq[ClassSymbol] =
-    cls.companionClass match
-      case Some(companionClass) if companionClass.isSubClass(defn.AnyValClass) =>
-        Seq(cls, companionClass)
-      case _ => Seq(cls)
+  private def withCompanionIfExtendsAnyVal(decodedClass: DecodedClass): Seq[Symbol] = decodedClass match
+    case classDef: DecodedClass.ClassDef =>
+      Seq(classDef.symbol) ++ classDef.symbol.companionClass.filter(_.isSubClass(defn.AnyValClass))
+    case _: DecodedClass.SyntheticCompanionClass => Seq.empty
+    case anonFun: DecodedClass.SAMOrPartialFunction => Seq(anonFun.symbol)
+    case inlined: DecodedClass.InlinedClass => withCompanionIfExtendsAnyVal(inlined.underlying)
+
+  private def withCompanionIfExtendsJavaLangEnum(decodedClass: DecodedClass): Seq[ClassSymbol] =
+    decodedClass.classSymbol.toSeq.flatMap { cls =>
+      if cls.isSubClass(defn.javaLangEnumClass) then Seq(cls) ++ cls.companionClass
+      else Seq(cls)
+    }
 
   private def decodeAdaptedAnonFun(decodedClass: DecodedClass, method: binary.Method): Seq[DecodedMethod] =
     if method.instructions.nonEmpty then
@@ -822,13 +827,6 @@ class BinaryDecoder(using Context, ThrowOrWarn):
   private def collectLiftedTrees[S](decodedClass: DecodedClass, method: binary.Method)(
       matcher: PartialFunction[LiftedTree[?], LiftedTree[S]]
   ): Seq[LiftedTree[S]] =
-    def withCompanionIfExtendsAnyVal(decodedClass: DecodedClass): Seq[Symbol] = decodedClass match
-      case classDef: DecodedClass.ClassDef =>
-        Seq(classDef.symbol) ++ classDef.symbol.companionClass.filter(_.isSubClass(defn.AnyValClass))
-      case _: DecodedClass.SyntheticCompanionClass => Seq.empty
-      case anonFun: DecodedClass.SAMOrPartialFunction => Seq(anonFun.symbol)
-      case inlined: DecodedClass.InlinedClass => withCompanionIfExtendsAnyVal(inlined.underlying)
-
     val owners = withCompanionIfExtendsAnyVal(decodedClass)
     val sourceLines =
       if owners.size == 2 && method.allParameters.exists(p => p.name.matches("\\$this\\$\\d+")) then
