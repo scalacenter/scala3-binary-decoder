@@ -139,6 +139,8 @@ class BinaryDecoder(using Context, ThrowOrWarn):
             .toSeq
         case Patterns.SerialVersionUID() =>
           Seq(DecodedField.SerialVersionUID(decodedClass, defn.LongType))
+        case Patterns.BitmapCapture() =>
+          Seq(DecodedField.BitmapCapture(decodedClass, defn.BooleanType, field.name.substring(0, field.name.lastIndexOf("bitmap$"))))
         case Patterns.Capture() =>
           val captureCollector = CaptureCollector(decodedClass.symbolOpt.get)
           val tree = decodedClass.symbolOpt.get.tree.getOrElse(throw NonMethodReferenceException(decodedClass.symbolOpt.get.toString))

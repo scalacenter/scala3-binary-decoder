@@ -156,6 +156,10 @@ object Patterns:
     def unapply(field: binary.Field): Boolean =
       field.name.matches(".+\\$\\d+")
 
+  object BitmapCapture:
+    def unapply(field: binary.Field): Boolean =
+      field.name.matches(".+bitmap\\$\\d+")
+
   extension (method: binary.Method)
     private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =
       val extracted = method.unexpandedDecodedNames

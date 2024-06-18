@@ -11,6 +11,20 @@ class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.ne
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
+
+  test("Defn fields") {
+    val source =
+      """|package example
+         |import scala.annotation.threadUnsafe
+         |
+         |class A:
+         |  @threadUnsafe lazy val x: Int = 1
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A", "boolean xbitmap$1", "A.x.<bitmap capture>: Boolean", generated = true)
+  }
+
   test("class defined in a method fields") {
     val source =
       """|package example

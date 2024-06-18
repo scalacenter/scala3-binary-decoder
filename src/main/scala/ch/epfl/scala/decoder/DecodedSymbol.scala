@@ -189,3 +189,6 @@ object DecodedField:
   final class Capture(val owner: DecodedClass, val symbol: TermSymbol) extends DecodedField:
     def declaredType: TypeOrMethodic = symbol.declaredType
     override def toString: String = s"Capture($owner, ${symbol.showBasic})"
+
+  final class BitmapCapture(val owner: DecodedClass, val declaredType: Type, val name: String) extends DecodedField:
+    override def toString: String = s"BitmapCapture($owner)"

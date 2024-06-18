@@ -323,3 +323,4 @@ extension (field: DecodedField)
       case field: DecodedField.Outer => true
       case field: DecodedField.SerialVersionUID => true
       case field: DecodedField.Capture => true
+      case field: DecodedField.BitmapCapture => true
