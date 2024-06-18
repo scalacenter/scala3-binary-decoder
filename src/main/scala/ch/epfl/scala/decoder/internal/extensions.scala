@@ -322,3 +322,4 @@ extension (field: DecodedField)
       case field: DecodedField.LazyValOffset => true
       case field: DecodedField.Outer => true
       case field: DecodedField.SerialVersionUID => true
+      case field: DecodedField.Capture => true

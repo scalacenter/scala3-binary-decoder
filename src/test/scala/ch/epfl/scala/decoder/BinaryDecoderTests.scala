@@ -11,6 +11,20 @@ class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.ne
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
+  test("class defined in a method fields") {
+    val source =
+      """|package example
+         |
+         |class Foo {
+         |  def foo = 
+         |    val x = " "
+         |    class A:
+         |      def bar = x
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.Foo$A$1", "java.lang.String x$1", "Foo.foo.A.x.<capture>: String", generated = true)
+  }
 
   test("case field in JavaLangEnum") {
     val source =

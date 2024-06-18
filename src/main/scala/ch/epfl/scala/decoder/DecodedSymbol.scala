@@ -185,3 +185,7 @@ object DecodedField:
 
   final class SerialVersionUID(val owner: DecodedClass, val declaredType: Type) extends DecodedField:
     override def toString: String = s"SerialVersionUID($owner)"
+
+  final class Capture(val owner: DecodedClass, val symbol: TermSymbol) extends DecodedField:
+    def declaredType: TypeOrMethodic = symbol.declaredType
+    override def toString: String = s"Capture($owner, ${symbol.showBasic})"

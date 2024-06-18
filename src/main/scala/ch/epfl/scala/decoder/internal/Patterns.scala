@@ -152,6 +152,10 @@ object Patterns:
   object SerialVersionUID:
     def unapply(field: binary.Field): Boolean = field.name == "serialVersionUID"
 
+  object Capture:
+    def unapply(field: binary.Field): Boolean =
+      field.name.matches(".+\\$\\d+")
+
   extension (method: binary.Method)
     private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =
       val extracted = method.unexpandedDecodedNames
