@@ -119,7 +119,7 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     extension (xs: Seq[DecodedField])
       def orTryDecode(f: PartialFunction[binary.Field, Seq[DecodedField]]): Seq[DecodedField] =
         if xs.nonEmpty then xs else f.applyOrElse(field, _ => Seq.empty[DecodedField])
-    val decodedFields = 
+    val decodedFields =
       tryDecode {
         case Patterns.LazyVal(name) =>
           for
@@ -140,26 +140,36 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         case Patterns.SerialVersionUID() =>
           Seq(DecodedField.SerialVersionUID(decodedClass, defn.LongType))
         case Patterns.BitmapCapture() =>
-          Seq(DecodedField.BitmapCapture(decodedClass, defn.BooleanType, field.name.substring(0, field.name.lastIndexOf("bitmap$"))))
+          Seq(
+            DecodedField.BitmapCapture(
+              decodedClass,
+              defn.BooleanType,
+              field.name.substring(0, field.name.lastIndexOf("bitmap$"))
+            )
+          )
         case Patterns.Capture() =>
           val captureCollector = CaptureCollector(decodedClass.symbolOpt.get)
-          val tree = decodedClass.symbolOpt.get.tree.getOrElse(throw NonMethodReferenceException(decodedClass.symbolOpt.get.toString))
+          val tree = decodedClass.symbolOpt.get.tree.getOrElse(
+            throw NonMethodReferenceException(decodedClass.symbolOpt.get.toString)
+          )
           captureCollector.traverse(tree)
-          captureCollector.capture.filter(field.name.substring(0, field.name.lastIndexOf("$")) == _.nameStr).map(DecodedField.Capture(decodedClass, _)).toSeq
+          captureCollector.capture
+            .filter(field.name.substring(0, field.name.lastIndexOf("$")) == _.nameStr)
+            .map(DecodedField.Capture(decodedClass, _))
+            .toSeq
 
         case _ if field.isStatic && decodedClass.isJava =>
           for
             owner <- decodedClass.companionClassSymbol.toSeq
             sym <- owner.declarations.collect { case sym: TermSymbol if sym.nameStr == field.name => sym }
           yield DecodedField.ValDef(decodedClass, sym)
-      }.orTryDecode{
-        case _ =>
-          for
-            owner <- withCompanionIfExtendsJavaLangEnum(decodedClass) ++ decodedClass.linearization.filter(_.isTrait)
-            sym <- owner.declarations.collect {
-              case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => sym
-            }
-          yield DecodedField.ValDef(decodedClass, sym)
+      }.orTryDecode { case _ =>
+        for
+          owner <- withCompanionIfExtendsJavaLangEnum(decodedClass) ++ decodedClass.linearization.filter(_.isTrait)
+          sym <- owner.declarations.collect {
+            case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => sym
+          }
+        yield DecodedField.ValDef(decodedClass, sym)
       }
     decodedFields.singleOrThrow(field)
   end decode

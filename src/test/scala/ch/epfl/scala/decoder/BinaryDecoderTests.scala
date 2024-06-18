@@ -12,6 +12,60 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("anon calls method impossible field") {
+    val source =
+      """|package example
+         |
+         |class A():
+         |  def bar =
+         |    val x: Int = 12
+         |    def getX = x
+         |    def foo = 
+         |      val x: Int = 1
+         |      def met = x
+         |      class B:
+         |        def bar2 = met
+         |        def bar3: Int = getX
+         |      
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showFields("example.A$B$1")
+    // decoder.assertDecodeField("example.A$B$1", "int x$3", "A.bar.foo.B.x.<capture>: Int", generated = true)
+    // decoder.assertDecodeField("example.A$B$1", "int x$4", "A.bar.foo.B.x.<capture>: Int", generated = true)
+  }
+  test("anon calls method field".only) {
+    val source =
+      """|package example
+         |
+         |class A():
+         |  def foo = 
+         |    val x: Int = 1
+         |    def met = x
+         |    class B:
+         |      def bar = met
+         |      
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    // decoder.showFields("example.A$B$1")
+    decoder.assertDecodeField("example.A$B$1", "int x$2", "A.foo.B.x.<capture>: Int", generated = true)
+  }
+
+  test("using Context field") {
+    val source =
+      """|package example
+         |
+         |trait Context
+         |
+         |class A:
+         |  private class B (using Context):
+         |    def foo = summon[Context]
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A$B", "example.Context x$1", "A.B.x$1: Context")
+
+  }
+
   test("Defn fields") {
     val source =
       """|package example
@@ -37,7 +91,12 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |}
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    decoder.assertDecodeField("example.Foo$A$1", "java.lang.String x$1", "Foo.foo.A.x.<capture>: String", generated = true)
+    decoder.assertDecodeField(
+      "example.Foo$A$1",
+      "java.lang.String x$1",
+      "Foo.foo.A.x.<capture>: String",
+      generated = true
+    )
   }
 
   test("case field in JavaLangEnum") {

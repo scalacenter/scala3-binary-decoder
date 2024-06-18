@@ -17,9 +17,9 @@ class CaptureCollector(cls: ClassSymbol | TermSymbol)(using Context, ThrowOrWarn
   val alreadySeen: mutable.Set[Symbol] = mutable.Set.empty
 
   def loopCollect(symbol: Symbol)(collect: => Unit): Unit =
-      if !alreadySeen.contains(symbol) then
-        alreadySeen += symbol
-        collect
+    if !alreadySeen.contains(symbol) then
+      alreadySeen += symbol
+      collect
   override def traverse(tree: Tree): Unit =
     tree match
       case _: TypeTree => ()
@@ -28,11 +28,9 @@ class CaptureCollector(cls: ClassSymbol | TermSymbol)(using Context, ThrowOrWarn
           // check that sym is local
           // and check that no owners of sym is cls
           if !alreadySeen.contains(sym) then
-            if sym.isLocal && !ownersIsCls(sym) then
-              capture += sym
-            
-            if sym.tree.nonEmpty then
-              loopCollect(sym)(sym.tree.foreach(traverse))
+            if sym.isLocal && !ownersIsCls(sym) then capture += sym
+
+            if sym.tree.nonEmpty then loopCollect(sym)(sym.tree.foreach(traverse))
       case _ => super.traverse(tree)
 
     def ownersIsCls(sym: Symbol): Boolean =
