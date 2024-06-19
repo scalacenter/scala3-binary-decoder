@@ -77,7 +77,7 @@ class StackTraceFormatter(using ThrowOrWarn):
       case field: DecodedField.Outer => "<outer>"
       case field: DecodedField.SerialVersionUID => "<serialVersionUID>"
       case field: DecodedField.Capture => formatName(field.symbol).dot("<capture>")
-      case field: DecodedField.BitmapCapture => field.name.dot("<bitmap capture>")
+      case field: DecodedField.LazyValBitmap => field.name.dot("<lazy val bitmap>")
 
   private def formatName(method: DecodedMethod): String =
     method match

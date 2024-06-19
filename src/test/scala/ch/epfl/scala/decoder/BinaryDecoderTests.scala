@@ -12,7 +12,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
-  test("anon calls method impossible field") {
+  test("ambiguous indirect captures") {
     val source =
       """|package example
          |
@@ -29,11 +29,12 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |      
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    decoder.showFields("example.A$B$1")
-    // decoder.assertDecodeField("example.A$B$1", "int x$3", "A.bar.foo.B.x.<capture>: Int", generated = true)
-    // decoder.assertDecodeField("example.A$B$1", "int x$4", "A.bar.foo.B.x.<capture>: Int", generated = true)
+    // decoder.showFields("example.A$B$1")
+    decoder.assertAmbiguousField("example.A$B$1", "int x$3")
+    decoder.assertAmbiguousField("example.A$B$1", "int x$4")
   }
-  test("anon calls method field".only) {
+
+  test("indirect capture") {
     val source =
       """|package example
          |
@@ -50,33 +51,35 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     decoder.assertDecodeField("example.A$B$1", "int x$2", "A.foo.B.x.<capture>: Int", generated = true)
   }
 
-  test("using Context field") {
+  test("anonymous using parameter") {
     val source =
       """|package example
          |
-         |trait Context
+         |trait C
          |
          |class A:
-         |  private class B (using Context):
-         |    def foo = summon[Context]
+         |  private class B (using C):
+         |    def foo = summon[C]
          |
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    decoder.assertDecodeField("example.A$B", "example.Context x$1", "A.B.x$1: Context")
+    decoder.assertDecodeField("example.A$B", "example.C x$1", "A.B.x$1: C")
 
   }
 
-  test("Defn fields") {
+  test("lazy val bitmap") {
     val source =
       """|package example
          |import scala.annotation.threadUnsafe
          |
          |class A:
          |  @threadUnsafe lazy val x: Int = 1
+         |  @threadUnsafe lazy val y: Int = 1
          |
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    decoder.assertDecodeField("example.A", "boolean xbitmap$1", "A.x.<bitmap capture>: Boolean", generated = true)
+    decoder.assertDecodeField("example.A", "boolean xbitmap$1", "A.x.<lazy val bitmap>: Boolean", generated = true)
+    decoder.assertDecodeField("example.A", "boolean ybitmap$1", "A.y.<lazy val bitmap>: Boolean", generated = true)
   }
 
   test("class defined in a method fields") {

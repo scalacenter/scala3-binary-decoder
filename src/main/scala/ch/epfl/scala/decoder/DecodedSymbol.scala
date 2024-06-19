@@ -190,5 +190,5 @@ object DecodedField:
     def declaredType: TypeOrMethodic = symbol.declaredType
     override def toString: String = s"Capture($owner, ${symbol.showBasic})"
 
-  final class BitmapCapture(val owner: DecodedClass, val declaredType: Type, val name: String) extends DecodedField:
-    override def toString: String = s"BitmapCapture($owner)"
+  final class LazyValBitmap(val owner: DecodedClass, val declaredType: Type, val name: String) extends DecodedField:
+    override def toString: String = s"LazyValBitmap($owner, , ${declaredType.showBasic})"

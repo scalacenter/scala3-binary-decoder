@@ -137,7 +137,7 @@ object Patterns:
 
   object LazyVal:
     def unapply(field: binary.Field): Option[String] =
-      """(.*)\$lzy\d+""".r.unapplySeq(field.decodedName).map(xs => xs(0).stripSuffix("$"))
+      """(.*)\$lzy\d+""".r.unapplySeq(field.decodedName).map(xs => xs(0))
 
   object Module:
     def unapply(field: binary.Field): Boolean = field.name == "MODULE$"
@@ -156,9 +156,9 @@ object Patterns:
     def unapply(field: binary.Field): Boolean =
       field.name.matches(".+\\$\\d+")
 
-  object BitmapCapture:
-    def unapply(field: binary.Field): Boolean =
-      field.name.matches(".+bitmap\\$\\d+")
+  object LazyValBitmap:
+    def unapply(field: binary.Field): Option[String] =
+      "(.+)bitmap\\$\\d+".r.unapplySeq(field.decodedName).map(xs => xs(0))
 
   extension (method: binary.Method)
     private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =
