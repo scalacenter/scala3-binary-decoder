@@ -12,6 +12,25 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("capture inline method") {
+    val source =
+      """|package example
+         |
+         |trait C
+         |
+         |object A:
+         |  inline def withMode(inline op: C ?=> Unit)(using C): Unit = op
+         |
+         |  def foo(using C) = withMode {
+         |    class B:
+         |      def bar = summon[C]
+         |  }
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showFields("example.A$B$1")
+    decoder.assertNotFoundField("example.A$B$1", "example.C x$1$1")
+  }
+
   test("anon lazy val") {
     val source =
       """|package example
