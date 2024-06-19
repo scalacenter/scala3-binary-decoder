@@ -12,6 +12,59 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("expanded names fields") {
+    val source =
+      """|package example
+         |
+         |trait A {
+         |  def foo = 
+         |    enum B:
+         |      case C, D
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField(
+      "example.A$B$3$",
+      "scala.runtime.LazyRef example$A$B$3$$$B$lzy1$3",
+      "A.foo.B.B.<capture>: B",
+      generated = true
+    )
+  }
+
+  test("lazy ref") {
+    val source2 =
+      """|package example
+         |trait C
+         |
+         |class A {
+         |  def foo =
+         |    lazy val c: C = new C {}
+         |    class B:
+         |      def ct = c
+         |}
+         |""".stripMargin
+    val source =
+      """|package example
+         |trait C
+         |
+         |class A {
+         |  def foo =
+         |    given C: C = new C {}
+         |    class B:
+         |      def cc = summon[C]
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source2, scalaVersion)
+    decoder.showFields("example.A$B$1")
+    decoder.assertDecodeField(
+      "example.A$B$1",
+      "scala.runtime.LazyRef c$lzy1$3",
+      "A.foo.B.c.<capture>: C",
+      generated = true
+    )
+
+  }
+
   test("ambiguous indirect captures") {
     val source =
       """|package example

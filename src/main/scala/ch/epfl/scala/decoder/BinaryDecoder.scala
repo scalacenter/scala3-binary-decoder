@@ -141,16 +141,16 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           Seq(DecodedField.SerialVersionUID(decodedClass, defn.LongType))
         case Patterns.LazyValBitmap(name) =>
           Seq(DecodedField.LazyValBitmap(decodedClass, defn.BooleanType, name))
-        case Patterns.Capture() =>
-          val captureCollector = CaptureCollector(decodedClass.symbolOpt.get)
-          val tree = decodedClass.symbolOpt.get.tree.getOrElse(
-            throw NonMethodReferenceException(decodedClass.symbolOpt.get.toString)
-          )
-          captureCollector.traverse(tree)
-          captureCollector.capture
-            .filter(field.name.substring(0, field.name.lastIndexOf("$")) == _.nameStr)
+        case Patterns.Capture(names) =>
+          decodedClass.symbolOpt.toSeq
+            .flatMap(CaptureCollector.collectCaptures)
+            .filter { captureSym =>
+              names.exists {
+                case Patterns.LazyValOnName(name) => name == captureSym.nameStr
+                case name => name == captureSym.nameStr
+              }
+            }
             .map(DecodedField.Capture(decodedClass, _))
-            .toSeq
 
         case _ if field.isStatic && decodedClass.isJava =>
           for

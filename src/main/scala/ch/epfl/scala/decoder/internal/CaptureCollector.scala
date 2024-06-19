@@ -8,9 +8,14 @@ import tastyquery.Contexts.*
 import tastyquery.SourcePosition
 import tastyquery.Types.*
 import tastyquery.Traversers
-import tastyquery.Exceptions.NonMethodReferenceException
 import ch.epfl.scala.decoder.ThrowOrWarn
 import scala.languageFeature.postfixOps
+
+object CaptureCollector:
+  def collectCaptures(cls: ClassSymbol | TermSymbol)(using Context, ThrowOrWarn): Set[TermSymbol] =
+    val collector = CaptureCollector(cls)
+    collector.traverse(cls.tree)
+    collector.capture.toSet
 
 class CaptureCollector(cls: ClassSymbol | TermSymbol)(using Context, ThrowOrWarn) extends TreeTraverser:
   val capture: mutable.Set[TermSymbol] = mutable.Set.empty

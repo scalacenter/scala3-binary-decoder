@@ -139,6 +139,10 @@ object Patterns:
     def unapply(field: binary.Field): Option[String] =
       """(.*)\$lzy\d+""".r.unapplySeq(field.decodedName).map(xs => xs(0))
 
+  object LazyValOnName:
+    def unapply(name: String): Option[String] =
+      """(.*)\$lzy\d+""".r.unapplySeq(name).map(xs => xs(0))
+
   object Module:
     def unapply(field: binary.Field): Boolean = field.name == "MODULE$"
 
@@ -153,12 +157,20 @@ object Patterns:
     def unapply(field: binary.Field): Boolean = field.name == "serialVersionUID"
 
   object Capture:
-    def unapply(field: binary.Field): Boolean =
-      field.name.matches(".+\\$\\d+")
+    def unapply(field: binary.Field): Option[Seq[String]] =
+      field.extractFromDecodedNames("(.+)\\$\\d+".r)(xs => xs(0))
 
   object LazyValBitmap:
     def unapply(field: binary.Field): Option[String] =
       "(.+)bitmap\\$\\d+".r.unapplySeq(field.decodedName).map(xs => xs(0))
+
+  extension (field: binary.Field)
+    private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =
+      val extracted = field.unexpandedDecodedNames
+        .flatMap(regex.unapplySeq)
+        .map(extract)
+        .distinct
+      if extracted.nonEmpty then Some(extracted) else None
 
   extension (method: binary.Method)
     private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =
