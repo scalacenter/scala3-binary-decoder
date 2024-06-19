@@ -12,6 +12,18 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("anon lazy val") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  lazy val (a, b) = (1, 2)
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    // decoder.showFields("example.A$$anon$2")
+    decoder.assertDecodeField("example.A", "java.lang.Object $1$$lzy1", "A.<anon>: (Int, Int)")
+  }
+
   test("expanded names fields") {
     val source =
       """|package example

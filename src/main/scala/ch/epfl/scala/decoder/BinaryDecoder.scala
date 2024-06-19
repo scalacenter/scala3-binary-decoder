@@ -146,7 +146,7 @@ class BinaryDecoder(using Context, ThrowOrWarn):
             .flatMap(CaptureCollector.collectCaptures)
             .filter { captureSym =>
               names.exists {
-                case Patterns.LazyValOnName(name) => name == captureSym.nameStr
+                case Patterns.LazyVal(name) => name == captureSym.nameStr
                 case name => name == captureSym.nameStr
               }
             }
