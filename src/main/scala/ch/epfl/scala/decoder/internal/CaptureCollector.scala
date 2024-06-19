@@ -28,9 +28,10 @@ class CaptureCollector(cls: ClassSymbol | TermSymbol)(using Context, ThrowOrWarn
           // check that sym is local
           // and check that no owners of sym is cls
           if !alreadySeen.contains(sym) then
-            if sym.isLocal && !ownersIsCls(sym) then capture += sym
-
-            if sym.tree.nonEmpty then loopCollect(sym)(sym.tree.foreach(traverse))
+            if sym.isLocal then
+              if !ownersIsCls(sym) then capture += sym
+              if sym.isMethod || sym.isLazyVal then loopCollect(sym)(sym.tree.foreach(traverse))
+              else if sym.isModuleVal then loopCollect(sym)(sym.moduleClass.flatMap(_.tree).foreach(traverse))
       case _ => super.traverse(tree)
 
     def ownersIsCls(sym: Symbol): Boolean =
