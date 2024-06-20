@@ -141,6 +141,15 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           Seq(DecodedField.SerialVersionUID(decodedClass, defn.LongType))
         case Patterns.LazyValBitmap(name) =>
           Seq(DecodedField.LazyValBitmap(decodedClass, defn.BooleanType, name))
+        case Patterns.AnyValCapture() =>
+          for
+            classSym <- decodedClass.symbolOpt.toSeq
+            outerClass <- classSym.outerClass.toSeq
+            if outerClass.isSubClass(defn.AnyValClass)
+            sym <- outerClass.declarations.collect {
+              case sym: TermSymbol if sym.isVal && !sym.isMethod => sym
+            }
+          yield DecodedField.Capture(decodedClass, sym)
         case Patterns.Capture(names) =>
           decodedClass.symbolOpt.toSeq
             .flatMap(CaptureCollector.collectCaptures)

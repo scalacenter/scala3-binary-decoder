@@ -12,6 +12,19 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("capture value class") {
+    val source =
+      """|package example
+         |
+         |class A(val x: Int) extends AnyVal:
+         |  def foo =
+         |    class B:
+         |      def bar = x
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.assertDecodeField("example.A$B$1", "int $this$1", "A.foo.B.x.<capture>: Int", generated = true)
+  }
+
   test("capture inline method") {
     val source =
       """|package example
@@ -27,7 +40,6 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |  }
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    decoder.showFields("example.A$B$1")
     decoder.assertNotFoundField("example.A$B$1", "example.C x$1$1")
   }
 
@@ -39,7 +51,6 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |  lazy val (a, b) = (1, 2)
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    // decoder.showFields("example.A$$anon$2")
     decoder.assertDecodeField("example.A", "java.lang.Object $1$$lzy1", "A.<anon>: (Int, Int)")
   }
 
@@ -63,7 +74,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   }
 
   test("lazy ref") {
-    val source2 =
+    val source =
       """|package example
          |trait C
          |
@@ -74,26 +85,13 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |      def ct = c
          |}
          |""".stripMargin
-    val source =
-      """|package example
-         |trait C
-         |
-         |class A {
-         |  def foo =
-         |    given C: C = new C {}
-         |    class B:
-         |      def cc = summon[C]
-         |}
-         |""".stripMargin
-    val decoder = TestingDecoder(source2, scalaVersion)
-    decoder.showFields("example.A$B$1")
+    val decoder = TestingDecoder(source, scalaVersion)
     decoder.assertDecodeField(
       "example.A$B$1",
       "scala.runtime.LazyRef c$lzy1$3",
       "A.foo.B.c.<capture>: C",
       generated = true
     )
-
   }
 
   test("ambiguous indirect captures") {
@@ -113,7 +111,6 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |      
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    // decoder.showFields("example.A$B$1")
     decoder.assertAmbiguousField("example.A$B$1", "int x$3")
     decoder.assertAmbiguousField("example.A$B$1", "int x$4")
   }
@@ -131,7 +128,6 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |      
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    // decoder.showFields("example.A$B$1")
     decoder.assertDecodeField("example.A$B$1", "int x$2", "A.foo.B.x.<capture>: Int", generated = true)
   }
 
@@ -141,13 +137,12 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |
          |trait C
          |
-         |class A:
-         |  private class B (using C):
-         |    def foo = summon[C]
+         |class B (using C):
+         |  def foo = summon[C]
          |
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
-    decoder.assertDecodeField("example.A$B", "example.C x$1", "A.B.x$1: C")
+    decoder.assertDecodeField("example.B", "example.C x$1", "B.x$1: C")
 
   }
 
@@ -389,9 +384,6 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     decoder.assertDecodeField("example.B$Y$Z", "example.B$Y $outer", "B.Y.Z.<outer>: Y", generated = true)
   }
 
-abstract class Others(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
-  def isScala33 = scalaVersion.isScala33
-  def isScala34 = scalaVersion.isScala34
   test("mixin and static forwarders") {
     val source =
       """|package example

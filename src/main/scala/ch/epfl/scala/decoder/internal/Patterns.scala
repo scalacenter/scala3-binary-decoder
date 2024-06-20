@@ -140,7 +140,6 @@ object Patterns:
 
     def unapply(name: String): Option[String] =
       """(.*)\$lzy\d+""".r.unapplySeq(name).map(xs => xs(0).stripSuffix("$"))
-    
 
   object Module:
     def unapply(field: binary.Field): Boolean = field.name == "MODULE$"
@@ -154,6 +153,10 @@ object Patterns:
 
   object SerialVersionUID:
     def unapply(field: binary.Field): Boolean = field.name == "serialVersionUID"
+
+  object AnyValCapture:
+    def unapply(field: binary.Field): Boolean =
+      field.name.matches("\\$this\\$\\d+")
 
   object Capture:
     def unapply(field: binary.Field): Option[Seq[String]] =
