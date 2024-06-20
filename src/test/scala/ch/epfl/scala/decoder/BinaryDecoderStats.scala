@@ -13,14 +13,16 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     val decoder = initDecoder("org.scala-lang", "scala3-compiler_3", "3.3.1")
     decoder.assertDecodeAll(
       expectedClasses = ExpectedCount(4426),
-      expectedMethods = ExpectedCount(68421, ambiguous = 25, notFound = 33)
+      expectedMethods = ExpectedCount(68421, ambiguous = 25, notFound = 33),
+      expectedFields = ExpectedCount(12548, ambiguous = 27, notFound = 1)
     )
 
   test("scala3-compiler:3.0.2"):
     val decoder = initDecoder("org.scala-lang", "scala3-compiler_3", "3.0.2")
     decoder.assertDecodeAll(
       expectedClasses = ExpectedCount(3859, notFound = 3),
-      expectedMethods = ExpectedCount(60762, ambiguous = 24, notFound = 163)
+      expectedMethods = ExpectedCount(60762, ambiguous = 24, notFound = 163),
+      expectedFields = ExpectedCount(10670, ambiguous = 23, notFound = 6)
     )
 
   test("io.github.vigoo:zio-aws-ec2_3:4.0.5 - slow".ignore):
@@ -32,7 +34,11 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
 
   test("org.tpolecat:doobie-h2_3:0.13.4"):
     val decoder = initDecoder("org.tpolecat", "doobie-h2_3", "0.13.4")
-    decoder.assertDecodeAll(ExpectedCount(10), ExpectedCount(218))
+    decoder.assertDecodeAll(
+      expectedClasses = ExpectedCount(10),
+      expectedMethods = ExpectedCount(218),
+      expectedFields = ExpectedCount(45)
+    )
 
   test("net.zygfryd:jackshaft_3:0.2.2".ignore):
     val decoder = initDecoder("net.zygfryd", "jackshaft_3", "0.2.2", FetchOptions(keepProvided = true))
@@ -40,7 +46,11 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
 
   test("company.jap:fields-core_3:0.4.16"):
     val decoder = initDecoder("company.jap", "fields-core_3", "0.4.16", FetchOptions(keepOptional = true))
-    decoder.assertDecodeAll(ExpectedCount(245), ExpectedCount(2755, notFound = 92))
+    decoder.assertDecodeAll(
+      expectedClasses = ExpectedCount(245),
+      expectedMethods = ExpectedCount(2755, notFound = 92),
+      expectedFields = ExpectedCount(298)
+    )
 
   test("org.clulab:processors-main_3:8.5.3"):
     assume(!isCI)
@@ -53,7 +63,11 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
 
   test("com.github.simy4.xpath:xpath-to-xml-scala_3:2.3.7"):
     val decoder = initDecoder("com.github.simy4.xpath", "xpath-to-xml-scala_3", "2.3.7")
-    decoder.assertDecodeAll(ExpectedCount(27), ExpectedCount(174, notFound = 2))
+    decoder.assertDecodeAll(
+      ExpectedCount(27),
+      ExpectedCount(174, notFound = 2),
+      expectedFields = ExpectedCount(20, ambiguous = 4)
+    )
 
   test("com.zengularity:benji-google_3:2.2.1".ignore):
     val fetchOptions = FetchOptions(
@@ -81,7 +95,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     val decoder = initDecoder("dev.zio", "zio-interop-cats_3", "23.1.0.0")(using ThrowOrWarn.ignore)
     decoder.assertDecodeAll(
       ExpectedCount(149, notFound = 9),
-      ExpectedCount(3546, notFound = 59)
+      ExpectedCount(3546, notFound = 59),
+      expectedFields = ExpectedCount(144, notFound = 2)
     )
 
   test("com.evolution:scache_3:5.1.2"):
@@ -89,19 +104,31 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
       repositories = Seq(MavenRepository("https://evolution.jfrog.io/artifactory/public"))
     )
     val decoder = initDecoder("com.evolution", "scache_3", "5.1.2", fetchOptions)
-    decoder.assertDecodeAll(ExpectedCount(105), ExpectedCount(1509))
+    decoder.assertDecodeAll(
+      ExpectedCount(105),
+      ExpectedCount(1509),
+      expectedFields = ExpectedCount(161)
+    )
 
   test("com.github.j5ik2o:docker-controller-scala-dynamodb-local_:1.15.34"):
     val fetchOptions = FetchOptions(
       repositories = Seq(MavenRepository("https://maven.seasar.org/maven2/"))
     )
     val decoder = initDecoder("com.github.j5ik2o", "docker-controller-scala-dynamodb-local_3", "1.15.34", fetchOptions)
-    decoder.assertDecodeAll(ExpectedCount(2), ExpectedCount(37))
+    decoder.assertDecodeAll(
+      ExpectedCount(2),
+      ExpectedCount(37),
+      expectedFields = ExpectedCount(5)
+    )
 
   test("eu.ostrzyciel.jelly:jelly-grpc_3:0.5.3"):
     val fetchOptions = FetchOptions(exclusions = Seq("io.grpc" -> "grpc-core"))
     val decoder = initDecoder("eu.ostrzyciel.jelly", "jelly-grpc_3", "0.5.3", fetchOptions)
-    decoder.assertDecodeAll(ExpectedCount(24), ExpectedCount(353))
+    decoder.assertDecodeAll(
+      ExpectedCount(24),
+      ExpectedCount(353),
+      expectedFields = ExpectedCount(61)
+    )
 
   test("com.devsisters:zio-agones_3:0.1.0"):
     assume(!isJava8)
@@ -109,7 +136,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     val decoder = initDecoder("com.devsisters", "zio-agones_3", "0.1.0", fetchOptions)(using ThrowOrWarn.ignore)
     decoder.assertDecodeAll(
       ExpectedCount(83, notFound = 26),
-      ExpectedCount(2804, ambiguous = 2, notFound = 5)
+      ExpectedCount(2804, ambiguous = 2, notFound = 5),
+      expectedFields = ExpectedCount(258)
     )
 
   test("org.log4s:log4s_3:1.10.0".ignore):
@@ -133,8 +161,16 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
 
   test("in.nvilla:regsafe_3:0.0.1: unstable TASTy version"):
     val decoder = initDecoder("in.nvilla", "regsafe_3", "0.0.1")(using ThrowOrWarn.ignore)
-    decoder.assertDecodeAll(ExpectedCount(19), ExpectedCount(158))
+    decoder.assertDecodeAll(
+      ExpectedCount(19),
+      ExpectedCount(158),
+      expectedFields = ExpectedCount(32, ambiguous = 4, notFound = 2)
+    )
 
   test("io.github.valdemargr:gql-core_3:0.3.3"):
     val decoder = initDecoder("io.github.valdemargr", "gql-core_3", "0.3.3")
-    decoder.assertDecodeAll(ExpectedCount(531), ExpectedCount(7267, ambiguous = 4, notFound = 1))
+    decoder.assertDecodeAll(
+      ExpectedCount(531),
+      ExpectedCount(7267, ambiguous = 4, notFound = 1),
+      expectedFields = ExpectedCount(851, notFound = 2)
+    )
