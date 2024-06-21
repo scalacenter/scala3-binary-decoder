@@ -8,6 +8,7 @@ import java.io.IOException
 import ch.epfl.scala.decoder.binary.SignedName
 import java.net.URLClassLoader
 import java.nio.file.Path
+import org.objectweb.asm.Type
 
 class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extends BinaryClassLoader:
   private val loadedClasses: mutable.Map[Class[?], JavaReflectClass] = mutable.Map.empty
@@ -49,6 +50,7 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
           new asm.MethodVisitor(asm.Opcodes.ASM9):
             val lines = mutable.Set.empty[Int]
             val instructions = mutable.Buffer.empty[Instruction]
+            val variables = mutable.Buffer.empty[Instruction.Variable]
             override def visitLineNumber(line: Int, start: asm.Label): Unit =
               lines += line
             override def visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String): Unit =
@@ -61,10 +63,23 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
                 isInterface: Boolean
             ): Unit =
               instructions += Instruction.Method(opcode, owner.replace('/', '.'), name, descriptor, isInterface)
+            override def visitLocalVariable(
+                name: String,
+                descriptor: String,
+                signature: String,
+                start: asm.Label,
+                end: asm.Label,
+                index: Int
+            ): Unit =
+              variables += Instruction.Variable(name, descriptor, signature)
             override def visitEnd(): Unit =
               allLines ++= lines
               val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, lines.toSeq))
-              extraInfos += SignedName(name, descriptor) -> ExtraMethodInfo(sourceLines, instructions.toSeq)
+              extraInfos += SignedName(name, descriptor) -> ExtraMethodInfo(
+                sourceLines,
+                instructions.toSeq,
+                variables.toSeq
+              )
     reader.accept(visitor, asm.Opcodes.ASM9)
     val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, allLines.toSeq))
     ExtraClassInfo(sourceLines, extraInfos.toMap)

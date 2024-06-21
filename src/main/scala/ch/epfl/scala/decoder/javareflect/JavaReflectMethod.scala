@@ -5,6 +5,8 @@ import ch.epfl.scala.decoder.binary
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import ch.epfl.scala.decoder.binary.SignedName
+import ch.epfl.scala.decoder.binary.Instruction
+import org.objectweb.asm.Type
 
 class JavaReflectMethod(
     method: Method,
@@ -12,6 +14,10 @@ class JavaReflectMethod(
     extraInfos: ExtraMethodInfo,
     loader: JavaReflectLoader
 ) extends binary.Method:
+
+  override def variables: Seq[binary.Variable] =
+    for variable <- extraInfos.variables
+    yield AsmVariable(variable.name, Type.getType(variable.descriptor).getClassName, this)
 
   override def returnType: Option[binary.Type] =
     Option(method.getReturnType).map(loader.loadClass)

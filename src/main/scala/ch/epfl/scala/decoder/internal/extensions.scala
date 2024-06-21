@@ -324,3 +324,8 @@ extension (field: DecodedField)
       case field: DecodedField.SerialVersionUID => true
       case field: DecodedField.Capture => true
       case field: DecodedField.LazyValBitmap => true
+
+extension (variable: DecodedVariable)
+  def isGenerated: Boolean =
+    variable match
+      case variable: DecodedVariable.LocalVariable => false

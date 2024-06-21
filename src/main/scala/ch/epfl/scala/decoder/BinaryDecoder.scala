@@ -177,6 +177,27 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     decodedFields.singleOrThrow(field)
   end decode
 
+  def decode(variable: binary.Variable): DecodedVariable =
+    val decodedMethod = decode(variable.declaringMethod)
+    decode(decodedMethod, variable)
+
+  def decode(decodedMethod: DecodedMethod, variable: binary.Variable): DecodedVariable =
+    def tryDecode(f: PartialFunction[binary.Variable, Seq[DecodedVariable]]): Seq[DecodedVariable] =
+      f.applyOrElse(variable, _ => Seq.empty[DecodedVariable])
+
+    extension (xs: Seq[DecodedVariable])
+      def orTryDecode(f: PartialFunction[binary.Variable, Seq[DecodedVariable]]): Seq[DecodedVariable] =
+        if xs.nonEmpty then xs else f.applyOrElse(variable, _ => Seq.empty[DecodedVariable])
+    val collected = VariableCollector.collectVariables(decodedMethod.symbolOpt.get)
+    val decodedVariables = variable match
+      case _ =>
+        for
+          metSym <- decodedMethod.symbolOpt.toSeq
+          sym <- VariableCollector.collectVariables(metSym)
+          if variable.name == sym.nameStr
+        yield DecodedVariable.LocalVariable(decodedMethod, sym)
+    decodedVariables.singleOrThrow(variable)
+
   private def reduceAmbiguityOnClasses(syms: Seq[DecodedClass]): Seq[DecodedClass] =
     if syms.size > 1 then
       val reduced = syms.filterNot(sym => syms.exists(enclose(sym, _)))
