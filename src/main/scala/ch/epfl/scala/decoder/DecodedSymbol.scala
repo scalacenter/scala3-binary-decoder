@@ -203,3 +203,8 @@ object DecodedVariable:
     def declaredType: TypeOrMethodic = symbol.declaredType
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
     override def toString: String = s"LocalVariable($owner, ${symbol.showBasic})"
+
+  final class CapturedVariable(val owner: DecodedMethod, val symbol: TermSymbol) extends DecodedVariable:
+    def declaredType: TypeOrMethodic = symbol.declaredType
+    override def symbolOpt: Option[TermSymbol] = Some(symbol)
+    override def toString: String = s"VariableCapture($owner, ${symbol.showBasic})"

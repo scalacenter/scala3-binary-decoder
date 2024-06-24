@@ -166,6 +166,10 @@ object Patterns:
     def unapply(field: binary.Field): Option[String] =
       "(.+)bitmap\\$\\d+".r.unapplySeq(field.decodedName).map(xs => xs(0))
 
+  object CapturedVariable:
+    def unapply(variable: binary.Variable): Option[String] =
+      "(.+)\\$\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
+
   extension (field: binary.Field)
     private def extractFromDecodedNames[T](regex: Regex)(extract: List[String] => T): Option[Seq[T]] =
       val extracted = field.unexpandedDecodedNames

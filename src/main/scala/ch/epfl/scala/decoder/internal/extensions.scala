@@ -329,3 +329,4 @@ extension (variable: DecodedVariable)
   def isGenerated: Boolean =
     variable match
       case variable: DecodedVariable.LocalVariable => false
+      case variable: DecodedVariable.CapturedVariable => true

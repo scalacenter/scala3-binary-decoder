@@ -188,14 +188,22 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     extension (xs: Seq[DecodedVariable])
       def orTryDecode(f: PartialFunction[binary.Variable, Seq[DecodedVariable]]): Seq[DecodedVariable] =
         if xs.nonEmpty then xs else f.applyOrElse(variable, _ => Seq.empty[DecodedVariable])
-    val collected = VariableCollector.collectVariables(decodedMethod.symbolOpt.get)
     val decodedVariables = variable match
+      // tryDecode {
+      case Patterns.CapturedVariable(name) =>
+        for
+          metSym <- decodedMethod.symbolOpt.toSeq
+          sym <- VariableCollector.collectVariables(metSym)
+          if name == sym.nameStr
+        yield DecodedVariable.CapturedVariable(decodedMethod, sym)
+      // }.orTryDecode {
       case _ =>
         for
           metSym <- decodedMethod.symbolOpt.toSeq
           sym <- VariableCollector.collectVariables(metSym)
           if variable.name == sym.nameStr
         yield DecodedVariable.LocalVariable(decodedMethod, sym)
+      // }
     decodedVariables.singleOrThrow(variable)
 
   private def reduceAmbiguityOnClasses(syms: Seq[DecodedClass]): Seq[DecodedClass] =

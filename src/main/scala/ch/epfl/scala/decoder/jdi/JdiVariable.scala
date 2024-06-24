@@ -2,9 +2,9 @@ package ch.epfl.scala.decoder.jdi
 
 import ch.epfl.scala.decoder.binary.*
 
-class JdiVariable (variable: com.sun.jdi.LocalVariable, method: com.sun.jdi.Method) extends Variable:
+class JdiVariable(variable: com.sun.jdi.LocalVariable, method: com.sun.jdi.Method) extends Variable:
 
-  override def declaringMethod: Method = 
+  override def declaringMethod: Method =
     JdiMethod(method)
 
   override def name: String = variable.name
