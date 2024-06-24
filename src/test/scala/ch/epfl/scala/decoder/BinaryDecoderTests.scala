@@ -9,6 +9,24 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  test("local variable parameter") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo(y: String) =
+         |    println(y)
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "void foo(java.lang.String y)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "void foo(java.lang.String y)",
+      "java.lang.String y",
+      "A.{foo(y: String): Unit}.y: String"
+    )
+  }
+
 
   test("local variable") {
     val source =

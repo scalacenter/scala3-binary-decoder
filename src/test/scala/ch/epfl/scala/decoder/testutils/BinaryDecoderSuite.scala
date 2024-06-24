@@ -34,7 +34,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     def showVariables(className: String, method: String): Unit =
       val variables = loadBinaryMethod(className, method).variables
       println(
-        s"Available binary fields in $method are:\n" + variables.map(f => s"  " + formatVariable(f)).mkString("\n")
+        s"Available binary variables in $method are:\n" + variables.map(f => s"  " + formatVariable(f)).mkString("\n")
       )
 
     def showFields(className: String): Unit =
