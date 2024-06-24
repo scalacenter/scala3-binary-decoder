@@ -10,6 +10,21 @@ class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.ne
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
 
+  test("test local lazy variable") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo() =
+         |    lazy val x: Int = 1
+         |    x
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int foo()")
+    decoder.assertDecodeVariable("example.A", "int foo()", "int x$1$lzyVal", "A.{foo(): Int}.x: Int")
+  }
+
   test("captured param in a local def") {
     val source =
       """|package example

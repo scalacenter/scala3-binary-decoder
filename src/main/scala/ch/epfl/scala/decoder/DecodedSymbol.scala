@@ -208,3 +208,8 @@ object DecodedVariable:
     def declaredType: TypeOrMethodic = symbol.declaredType
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
     override def toString: String = s"VariableCapture($owner, ${symbol.showBasic})"
+
+  final class LazyValVariable(val owner: DecodedMethod, val symbol: TermSymbol) extends DecodedVariable:
+    def declaredType: TypeOrMethodic = symbol.declaredType
+    override def symbolOpt: Option[TermSymbol] = Some(symbol)
+    override def toString: String = s"LazyValVariable($owner, ${symbol.showBasic})"

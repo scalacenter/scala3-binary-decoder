@@ -330,3 +330,4 @@ extension (variable: DecodedVariable)
     variable match
       case variable: DecodedVariable.LocalVariable => false
       case variable: DecodedVariable.CapturedVariable => true
+      case variable: DecodedVariable.LazyValVariable => false

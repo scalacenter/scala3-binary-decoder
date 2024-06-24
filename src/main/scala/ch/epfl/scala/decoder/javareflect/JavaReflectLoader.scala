@@ -63,6 +63,8 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
                 isInterface: Boolean
             ): Unit =
               instructions += Instruction.Method(opcode, owner.replace('/', '.'), name, descriptor, isInterface)
+              if descriptor.startsWith("(Lscala/runtime/Lazy") then
+                variables += Instruction.Variable(name + "$lzyVal", descriptor.substring(descriptor.indexOf(')') + 1), null)
             override def visitLocalVariable(
                 name: String,
                 descriptor: String,

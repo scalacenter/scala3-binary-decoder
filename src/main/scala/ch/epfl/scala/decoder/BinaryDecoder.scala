@@ -190,6 +190,12 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         if xs.nonEmpty then xs else f.applyOrElse(variable, _ => Seq.empty[DecodedVariable])
     val decodedVariables = variable match
       // tryDecode {
+      case Patterns.LazyValVariable(name) =>
+        for
+          metSym <- decodedMethod.symbolOpt.toSeq
+          sym <- VariableCollector.collectVariables(metSym)
+          if name == sym.nameStr
+        yield DecodedVariable.LazyValVariable(decodedMethod, sym)
       case Patterns.CapturedVariable(name) =>
         for
           metSym <- decodedMethod.symbolOpt.toSeq
