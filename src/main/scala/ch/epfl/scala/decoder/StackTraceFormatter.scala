@@ -16,7 +16,7 @@ class StackTraceFormatter(using ThrowOrWarn):
       case tpe => format(tpe)
     val test1 = formatOwner(variable)
     val test2 = formatName(variable)
-    formatMethodSignatures(formatOwner(variable)).dot(formatName(variable)) + typeAscription
+    formatName(variable) + typeAscription
 
   def formatMethodSignatures(input: String): String = {
     def dotArray(input: Array[String]): String = {

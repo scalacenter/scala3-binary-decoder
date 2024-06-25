@@ -17,7 +17,9 @@ class JavaReflectMethod(
 
   override def variables: Seq[binary.Variable] =
     for variable <- extraInfos.variables
-    yield AsmVariable(variable.name, Type.getType(variable.descriptor).getClassName, this)
+    yield
+      val typeName = Type.getType(variable.descriptor).getClassName
+      AsmVariable(variable.name, loader.loadClass(typeName), this)
 
   override def returnType: Option[binary.Type] =
     Option(method.getReturnType).map(loader.loadClass)

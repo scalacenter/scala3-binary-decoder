@@ -76,6 +76,17 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       assertEquals(formatter.format(decodedVariable), expected)
       assertEquals(decodedVariable.isGenerated, generated)
 
+    def assertAmbiguousVariable(className: String, method: String, variable: String)(using munit.Location): Unit =
+      val binaryVariable = loadBinaryVariable(className, method, variable)
+      intercept[AmbiguousException](decoder.decode(binaryVariable))
+
+    def assertNotFoundVariable(className: String, method: String, variable: String)(using munit.Location): Unit =
+      val binaryVariable = loadBinaryVariable(className, method, variable)
+      intercept[NotFoundException](decoder.decode(binaryVariable))
+
+    def assertNoSuchElementVariable(className: String, method: String, variable: String)(using munit.Location): Unit =
+      intercept[NoSuchElementException](loadBinaryVariable(className, method, variable))
+
     def assertAmbiguousField(className: String, field: String)(using munit.Location): Unit =
       val binaryField: binary.Field = loadBinaryField(className, field)
       intercept[AmbiguousException](decoder.decode(binaryField))

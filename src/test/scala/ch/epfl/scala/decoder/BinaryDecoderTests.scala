@@ -21,7 +21,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
     decoder.showVariables("example.A", "java.lang.Object foo()")
-    decoder.assertDecodeVariable("example.A", "java.lang.Object foo()", "example.A$B$2$ B$1$lzyVal", "A.{foo(): Object}.B: B")
+    decoder.assertNoSuchElementVariable("example.A", "java.lang.Object foo()", "example.A$B$2$ B$1$lzyVal")
   }
 
   test("test local lazy variable") {
@@ -36,7 +36,22 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
     decoder.showVariables("example.A", "int foo()")
-    decoder.assertDecodeVariable("example.A", "int foo()", "int x$1$lzyVal", "A.{foo(): Int}.x: Int")
+    decoder.assertNoSuchElementVariable("example.A", "int foo()", "int x$1$lzyVal")
+  }
+
+  test("array") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo() = 
+         |    val x = Array(1, 2, 3)
+         |    x
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int[] foo()")
+    decoder.assertDecodeVariable("example.A", "int[] foo()", "int[] x", "x: Array[Int]")
   }
 
   test("captured param in a local def") {
@@ -55,11 +70,10 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
       "example.A",
       "int bar$1(int x$1)",
       "int x$1",
-      "A.foo.{bar(): Int}.x.<capture>: Int",
+      "x.<capture>: Int",
       generated = true
     )
   }
-
 
   test("local variable parameter") {
     val source =
@@ -75,10 +89,9 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
       "example.A",
       "void foo(java.lang.String y)",
       "java.lang.String y",
-      "A.{foo(y: String): Unit}.y: String"
+      "y: String"
     )
   }
-
 
   test("local variable") {
     val source =
@@ -91,7 +104,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
     decoder.showVariables("example.A", "int foo()")
-    decoder.assertDecodeVariable("example.A", "int foo()", "int x", "A.{foo: Int}.x: Int")
+    decoder.assertDecodeVariable("example.A", "int foo()", "int x", "x: Int")
   }
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34

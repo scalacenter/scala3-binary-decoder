@@ -5,7 +5,7 @@ import ch.epfl.scala.decoder.binary
 private case class ExtraMethodInfo(
     sourceLines: Option[binary.SourceLines],
     instructions: Seq[binary.Instruction],
-    variables: Seq[binary.Instruction.Variable]
+    variables: Seq[ExtraMethodInfo.Variable]
 )
 
 private object ExtraMethodInfo:
@@ -14,3 +14,4 @@ private object ExtraMethodInfo:
     Seq.empty,
     Seq.empty
   )
+  case class Variable(name: String, descriptor: String, signature: String)

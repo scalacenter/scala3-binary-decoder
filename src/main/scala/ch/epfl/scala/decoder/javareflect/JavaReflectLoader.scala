@@ -17,8 +17,12 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
     loadedClasses.getOrElseUpdate(cls, doLoadClass(cls))
 
   override def loadClass(name: String): JavaReflectClass =
-    val cls = classLoader.loadClass(name)
-    loadClass(cls)
+    name match
+      case s"$tpe[]" =>
+        val componentType = loadClass(tpe)
+        JavaReflectClass.array(componentType)
+      case _ =>
+        JavaReflectClass.primitives.getOrElse(name, loadClass(classLoader.loadClass(name)))
 
   private def doLoadClass(cls: Class[?]): JavaReflectClass =
     val extraInfo =
@@ -50,7 +54,7 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
           new asm.MethodVisitor(asm.Opcodes.ASM9):
             val lines = mutable.Set.empty[Int]
             val instructions = mutable.Buffer.empty[Instruction]
-            val variables = mutable.Buffer.empty[Instruction.Variable]
+            val variables = mutable.Buffer.empty[ExtraMethodInfo.Variable]
             override def visitLineNumber(line: Int, start: asm.Label): Unit =
               lines += line
             override def visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String): Unit =
@@ -63,8 +67,9 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
                 isInterface: Boolean
             ): Unit =
               instructions += Instruction.Method(opcode, owner.replace('/', '.'), name, descriptor, isInterface)
-              if descriptor.startsWith("(Lscala/runtime/Lazy") then
-                variables += Instruction.Variable(name + "$lzyVal", descriptor.substring(descriptor.indexOf(')') + 1), null)
+              // We should fix the compiler instead
+              // if descriptor.startsWith("(Lscala/runtime/Lazy") then
+              //   variables += ExtraMethodInfo.Variable(name + "$lzyVal", descriptor.substring(descriptor.indexOf(')') + 1), null)
             override def visitLocalVariable(
                 name: String,
                 descriptor: String,
@@ -73,7 +78,7 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
                 end: asm.Label,
                 index: Int
             ): Unit =
-              variables += Instruction.Variable(name, descriptor, signature)
+              variables += ExtraMethodInfo.Variable(name, descriptor, signature)
             override def visitEnd(): Unit =
               allLines ++= lines
               val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, lines.toSeq))
