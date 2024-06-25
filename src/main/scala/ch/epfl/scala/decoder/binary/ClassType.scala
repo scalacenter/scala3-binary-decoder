@@ -9,6 +9,7 @@ trait ClassType extends Type:
   def declaredField(name: String): Option[Field]
   def declaredMethod(name: String, descriptor: String): Option[Method]
   def declaredMethods: Seq[Method]
+  def declaredFields: Seq[Field]
   def classLoader: BinaryClassLoader
 
   def isObject = name.endsWith("$")

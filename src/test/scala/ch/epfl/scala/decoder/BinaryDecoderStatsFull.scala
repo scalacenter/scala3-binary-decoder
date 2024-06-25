@@ -31,7 +31,7 @@ class BinaryDecoderStatsFull extends BinaryDecoderSuite:
       val parts = line.split(',').map(_.drop(1).dropRight(1))
       val (org, artifact, version) = (parts(0), parts(1), parts(2))
       try
-        val (classCounter, methodCounter) = tryDecodeAll(org, artifact, version)
+        val (classCounter, methodCounter, _) = tryDecodeAll(org, artifact, version)
         classCounts += classCounter.count
         methodCounts += methodCounter.count
       catch case e => println(s"cannot decode $line")
@@ -45,7 +45,7 @@ class BinaryDecoderStatsFull extends BinaryDecoderSuite:
       .sortBy(count => -count.successPercent)
       .foreach(c => println(s"${c.name} ${c.successPercent}%"))
 
-  def tryDecodeAll(org: String, artifact: String, version: String)(using ThrowOrWarn): (Counter, Counter) =
+  def tryDecodeAll(org: String, artifact: String, version: String)(using ThrowOrWarn): (Counter, Counter, Counter) =
     val repositories =
       if org == "org.clulab" then Seq(MavenRepository("http://artifactory.cs.arizona.edu:8081/artifactory/sbt-release"))
       else if org == "com.zengularity" then
@@ -53,7 +53,7 @@ class BinaryDecoderStatsFull extends BinaryDecoderSuite:
       else if org == "com.evolution" then Seq(MavenRepository("https://evolution.jfrog.io/artifactory/public"))
       else if org == "com.github.j5ik2o" then Seq(MavenRepository("https://maven.seasar.org/maven2/"))
       else Seq.empty
-    def tryWith(keepOptional: Boolean, keepProvided: Boolean): Option[(Counter, Counter)] =
+    def tryWith(keepOptional: Boolean, keepProvided: Boolean): Option[(Counter, Counter, Counter)] =
       try
         val fetchOptions = FetchOptions(keepOptional, keepProvided, repositories)
         val decoder = initDecoder(org, artifact, version, fetchOptions)

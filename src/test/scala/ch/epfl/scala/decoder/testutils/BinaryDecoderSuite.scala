@@ -31,6 +31,10 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     TestingDecoder(library, libraries)
 
   extension (decoder: TestingDecoder)
+    def showFields(className: String): Unit =
+      val fields = decoder.classLoader.loadClass(className).declaredFields
+      println(s"Available binary fields in $className are:\n" + fields.map(f => s"  " + formatField(f)).mkString("\n"))
+
     def assertDecode(className: String, expected: String)(using munit.Location): Unit =
       val cls = decoder.classLoader.loadClass(className)
       val decodedClass = decoder.decode(cls)
@@ -43,6 +47,22 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       val decodedMethod = decoder.decode(binaryMethod)
       assertEquals(formatter.format(decodedMethod), expected)
       assertEquals(decodedMethod.isGenerated, generated)
+
+    def assertDecodeField(className: String, field: String, expected: String, generated: Boolean = false)(using
+        munit.Location
+    ): Unit =
+      val binaryField: binary.Field = loadBinaryField(className, field)
+      val decodedField = decoder.decode(binaryField)
+      assertEquals(formatter.format(decodedField), expected)
+      assertEquals(decodedField.isGenerated, generated)
+
+    def assertAmbiguousField(className: String, field: String)(using munit.Location): Unit =
+      val binaryField: binary.Field = loadBinaryField(className, field)
+      intercept[AmbiguousException](decoder.decode(binaryField))
+
+    def assertNotFoundField(className: String, field: String)(using munit.Location): Unit =
+      val binaryField = loadBinaryField(className, field)
+      intercept[NotFoundException](decoder.decode(binaryField))
 
     def assertNotFound(declaringType: String, javaSig: String)(using munit.Location): Unit =
       val method = loadBinaryMethod(declaringType, javaSig)
@@ -67,34 +87,41 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     def assertDecodeAll(
         expectedClasses: ExpectedCount = ExpectedCount(0),
         expectedMethods: ExpectedCount = ExpectedCount(0),
+        expectedFields: ExpectedCount = ExpectedCount(0),
         printProgress: Boolean = false
     )(using munit.Location): Unit =
-      val (classCounter, methodCounter) = decodeAll(printProgress)
+      val (classCounter, methodCounter, fieldCounter) = decodeAll(printProgress)
       if classCounter.throwables.nonEmpty then
         classCounter.printThrowables()
         classCounter.printThrowable(0)
       else if methodCounter.throwables.nonEmpty then
         methodCounter.printThrowables()
         methodCounter.printThrowable(0)
-      // methodCounter.printNotFound()
+      fieldCounter.printNotFound()
       classCounter.check(expectedClasses)
       methodCounter.check(expectedMethods)
+      fieldCounter.check(expectedFields)
 
-    def decodeAll(printProgress: Boolean = false): (Counter, Counter) =
+    def decodeAll(printProgress: Boolean = false): (Counter, Counter, Counter) =
       val classCounter = Counter(decoder.name + " classes")
       val methodCounter = Counter(decoder.name + " methods")
+      val fieldCounter = Counter(decoder.name + " fields")
       for
         binaryClass <- decoder.allClasses
         _ = if printProgress then println(s"\"${binaryClass.name}\"")
         decodedClass <- decoder.tryDecode(binaryClass, classCounter)
-        binaryMethod <- binaryClass.declaredMethods
+        binaryMethodOrField <- binaryClass.declaredMethods ++ binaryClass.declaredFields
       do
-        if printProgress then println(formatDebug(binaryMethod))
-        decoder.tryDecode(decodedClass, binaryMethod, methodCounter)
+        if printProgress then println(formatDebug(binaryMethodOrField))
+        binaryMethodOrField match
+          case m: binary.Method =>
+            decoder.tryDecode(decodedClass, m, methodCounter)
+          case f: binary.Field =>
+            decoder.tryDecode(decodedClass, f, fieldCounter)
       classCounter.printReport()
       methodCounter.printReport()
-
-      (classCounter, methodCounter)
+      fieldCounter.printReport()
+      (classCounter, methodCounter, fieldCounter)
 
     private def loadBinaryMethod(declaringType: String, method: String)(using
         munit.Location
@@ -105,6 +132,16 @@ trait BinaryDecoderSuite extends CommonFunSuite:
             |    Available binary methods in $declaringType are:
             |""".stripMargin + binaryMethods.map(m => s"        " + formatMethod(m)).mkString("\n")
       binaryMethods.find(m => formatMethod(m) == method).getOrElse(throw new NoSuchElementException(notFoundMessage))
+
+    private def loadBinaryField(declaringType: String, field: String)(using
+        munit.Location
+    ): binary.Field =
+      val binaryFields = decoder.classLoader.loadClass(declaringType).declaredFields
+      def notFoundMessage: String =
+        s"""|$field
+            |    Available binary fields in $declaringType are:
+            |""".stripMargin + binaryFields.map(f => s"        " + formatField(f)).mkString("\n")
+      binaryFields.find(f => formatField(f) == field).getOrElse(throw new NoSuchElementException(notFoundMessage))
 
     private def tryDecode(cls: binary.ClassType, counter: Counter): Option[DecodedClass] =
       try
@@ -131,10 +168,21 @@ trait BinaryDecoderSuite extends CommonFunSuite:
         case ambiguous: AmbiguousException => counter.ambiguous += ambiguous
         case ignored: IgnoredException => counter.ignored += ignored
         case e => counter.throwables += (mthd -> e)
+
+    private def tryDecode(cls: DecodedClass, field: binary.Field, counter: Counter): Unit =
+      try
+        val decoded = decoder.decode(cls, field)
+        counter.success += (field -> decoded)
+      catch
+        case notFound: NotFoundException => counter.notFound += (field -> notFound)
+        case ambiguous: AmbiguousException => counter.ambiguous += ambiguous
+        case ignored: IgnoredException => counter.ignored += ignored
+        case e => counter.throwables += (field -> e)
   end extension
 
   private def formatDebug(m: binary.Symbol): String =
     m match
+      case f: binary.Field => s"\"${f.declaringClass}\", \"${formatField(f)}\""
       case m: binary.Method => s"\"${m.declaringClass.name}\", \"${formatMethod(m)}\""
       case cls => s"\"${cls.name}\""
 
@@ -142,6 +190,9 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     val returnType = m.returnType.map(_.name).get
     val parameters = m.allParameters.map(p => p.`type`.name + " " + p.name).mkString(", ")
     s"$returnType ${m.name}($parameters)"
+
+  private def formatField(f: binary.Field): String =
+    s"${f.`type`.name} ${f.name}"
 
   case class ExpectedCount(success: Int, ambiguous: Int = 0, notFound: Int = 0, throwables: Int = 0)
 

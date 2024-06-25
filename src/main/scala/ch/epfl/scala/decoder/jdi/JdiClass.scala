@@ -32,6 +32,8 @@ class JdiClass(ref: com.sun.jdi.ReferenceType) extends JdiType(ref) with ClassTy
 
   override def declaredField(name: String): Option[Field] = None
 
+  override def declaredFields: Seq[Field] = Seq.empty
+
   private[jdi] def constantPool: ConstantPool = ConstantPool(ref.constantPool)
 
   private def allLineLocations: Seq[com.sun.jdi.Location] =

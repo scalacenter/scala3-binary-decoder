@@ -8,7 +8,6 @@ import tastyquery.Contexts.*
 import tastyquery.SourcePosition
 import tastyquery.Types.*
 import tastyquery.Traversers
-import tastyquery.Exceptions.NonMethodReferenceException
 import ch.epfl.scala.decoder.ThrowOrWarn
 
 /**

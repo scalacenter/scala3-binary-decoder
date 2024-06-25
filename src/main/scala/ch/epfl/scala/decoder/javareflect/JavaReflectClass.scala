@@ -41,3 +41,6 @@ class JavaReflectClass(cls: Class[?], extraInfo: ExtraClassInfo, override val cl
       val methodInfo = extraInfo.getMethodInfo(sig)
       JavaReflectConstructor(c, sig, methodInfo, classLoader)
     }
+
+  override def declaredFields: Seq[binary.Field] =
+    cls.getDeclaredFields().map(f => JavaReflectField(f, classLoader))

@@ -21,6 +21,12 @@ extension (symbol: Symbol)
   def isInline = symbol.isTerm && symbol.asTerm.isInline
   def nameStr: String = symbol.name.toString
 
+  def outerClass: Option[ClassSymbol] =
+    symbol.owner match
+      case null => None
+      case owner: ClassSymbol => Some(owner)
+      case owner => owner.outerClass
+
   def showBasic =
     val span = symbol.tree.map(_.pos) match
       case Some(pos) if pos.isFullyDefined =>
@@ -307,3 +313,14 @@ extension (method: DecodedMethod)
       case _: DecodedMethod.SAMOrPartialFunctionConstructor => true
       case method: DecodedMethod.InlinedMethod => method.underlying.isGenerated
       case _ => false
+
+extension (field: DecodedField)
+  def isGenerated: Boolean =
+    field match
+      case field: DecodedField.ValDef => false
+      case field: DecodedField.ModuleVal => true
+      case field: DecodedField.LazyValOffset => true
+      case field: DecodedField.Outer => true
+      case field: DecodedField.SerialVersionUID => true
+      case field: DecodedField.Capture => true
+      case field: DecodedField.LazyValBitmap => true

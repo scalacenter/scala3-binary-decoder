@@ -14,6 +14,7 @@ import tastyquery.jdk.ClasspathLoaders
 
 import java.nio.file.Path
 import scala.util.matching.Regex
+import tastyquery.Exceptions.NonMethodReferenceException
 
 object BinaryDecoder:
   def apply(classEntries: Seq[Path])(using ThrowOrWarn): BinaryDecoder =
@@ -105,6 +106,75 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         }
 
     candidates.singleOrThrow(method)
+  end decode
+
+  def decode(field: binary.Field): DecodedField =
+    val decodedClass = decode(field.declaringClass)
+    decode(decodedClass, field)
+
+  def decode(decodedClass: DecodedClass, field: binary.Field): DecodedField =
+    def tryDecode(f: PartialFunction[binary.Field, Seq[DecodedField]]): Seq[DecodedField] =
+      f.applyOrElse(field, _ => Seq.empty[DecodedField])
+
+    extension (xs: Seq[DecodedField])
+      def orTryDecode(f: PartialFunction[binary.Field, Seq[DecodedField]]): Seq[DecodedField] =
+        if xs.nonEmpty then xs else f.applyOrElse(field, _ => Seq.empty[DecodedField])
+    val decodedFields =
+      tryDecode {
+        case Patterns.LazyVal(name) =>
+          for
+            owner <- decodedClass.classSymbol.toSeq ++ decodedClass.linearization.filter(_.isTrait)
+            sym <- owner.declarations.collect {
+              case sym: TermSymbol if sym.nameStr == name && sym.isModuleOrLazyVal => sym
+            }
+          yield DecodedField.ValDef(decodedClass, sym)
+        case Patterns.Module() =>
+          decodedClass.classSymbol.flatMap(_.moduleValue).map(DecodedField.ModuleVal(decodedClass, _)).toSeq
+        case Patterns.Offset(nbr) =>
+          Seq(DecodedField.LazyValOffset(decodedClass, nbr, defn.LongType))
+        case Patterns.OuterField() =>
+          decodedClass.symbolOpt
+            .flatMap(_.outerClass)
+            .map(outerClass => DecodedField.Outer(decodedClass, outerClass.selfType))
+            .toSeq
+        case Patterns.SerialVersionUID() =>
+          Seq(DecodedField.SerialVersionUID(decodedClass, defn.LongType))
+        case Patterns.LazyValBitmap(name) =>
+          Seq(DecodedField.LazyValBitmap(decodedClass, defn.BooleanType, name))
+        case Patterns.AnyValCapture() =>
+          for
+            classSym <- decodedClass.symbolOpt.toSeq
+            outerClass <- classSym.outerClass.toSeq
+            if outerClass.isSubClass(defn.AnyValClass)
+            sym <- outerClass.declarations.collect {
+              case sym: TermSymbol if sym.isVal && !sym.isMethod => sym
+            }
+          yield DecodedField.Capture(decodedClass, sym)
+        case Patterns.Capture(names) =>
+          decodedClass.symbolOpt.toSeq
+            .flatMap(CaptureCollector.collectCaptures)
+            .filter { captureSym =>
+              names.exists {
+                case Patterns.LazyVal(name) => name == captureSym.nameStr
+                case name => name == captureSym.nameStr
+              }
+            }
+            .map(DecodedField.Capture(decodedClass, _))
+
+        case _ if field.isStatic && decodedClass.isJava =>
+          for
+            owner <- decodedClass.companionClassSymbol.toSeq
+            sym <- owner.declarations.collect { case sym: TermSymbol if sym.nameStr == field.name => sym }
+          yield DecodedField.ValDef(decodedClass, sym)
+      }.orTryDecode { case _ =>
+        for
+          owner <- withCompanionIfExtendsJavaLangEnum(decodedClass) ++ decodedClass.linearization.filter(_.isTrait)
+          sym <- owner.declarations.collect {
+            case sym: TermSymbol if matchTargetName(field, sym) && !sym.isMethod => sym
+          }
+        yield DecodedField.ValDef(decodedClass, sym)
+      }
+    decodedFields.singleOrThrow(field)
   end decode
 
   private def reduceAmbiguityOnClasses(syms: Seq[DecodedClass]): Seq[DecodedClass] =
@@ -476,13 +546,8 @@ class BinaryDecoder(using Context, ThrowOrWarn):
       .map(target => DecodedMethod.TraitStaticForwarder(decode(decodedClass, target)))
 
   private def decodeOuter(decodedClass: DecodedClass): Option[DecodedMethod.OuterAccessor] =
-    def outerClass(sym: Symbol): Option[ClassSymbol] =
-      sym.owner match
-        case null => None
-        case owner if owner.isClass => Some(owner.asClass)
-        case owner => outerClass(owner)
     decodedClass.symbolOpt
-      .flatMap(outerClass)
+      .flatMap(_.outerClass)
       .map(outerClass => DecodedMethod.OuterAccessor(decodedClass, outerClass.thisType))
 
   private def decodeTraitInitializer(
@@ -616,11 +681,18 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         DecodedMethod.MixinForwarder(decodedClass, staticForwarder.target)
       }
 
-  private def withCompanionIfExtendsAnyVal(cls: ClassSymbol): Seq[ClassSymbol] =
-    cls.companionClass match
-      case Some(companionClass) if companionClass.isSubClass(defn.AnyValClass) =>
-        Seq(cls, companionClass)
-      case _ => Seq(cls)
+  private def withCompanionIfExtendsAnyVal(decodedClass: DecodedClass): Seq[Symbol] = decodedClass match
+    case classDef: DecodedClass.ClassDef =>
+      Seq(classDef.symbol) ++ classDef.symbol.companionClass.filter(_.isSubClass(defn.AnyValClass))
+    case _: DecodedClass.SyntheticCompanionClass => Seq.empty
+    case anonFun: DecodedClass.SAMOrPartialFunction => Seq(anonFun.symbol)
+    case inlined: DecodedClass.InlinedClass => withCompanionIfExtendsAnyVal(inlined.underlying)
+
+  private def withCompanionIfExtendsJavaLangEnum(decodedClass: DecodedClass): Seq[ClassSymbol] =
+    decodedClass.classSymbol.toSeq.flatMap { cls =>
+      if cls.isSubClass(defn.javaLangEnumClass) then Seq(cls) ++ cls.companionClass
+      else Seq(cls)
+    }
 
   private def decodeAdaptedAnonFun(decodedClass: DecodedClass, method: binary.Method): Seq[DecodedMethod] =
     if method.instructions.nonEmpty then
@@ -786,13 +858,6 @@ class BinaryDecoder(using Context, ThrowOrWarn):
   private def collectLiftedTrees[S](decodedClass: DecodedClass, method: binary.Method)(
       matcher: PartialFunction[LiftedTree[?], LiftedTree[S]]
   ): Seq[LiftedTree[S]] =
-    def withCompanionIfExtendsAnyVal(decodedClass: DecodedClass): Seq[Symbol] = decodedClass match
-      case classDef: DecodedClass.ClassDef =>
-        Seq(classDef.symbol) ++ classDef.symbol.companionClass.filter(_.isSubClass(defn.AnyValClass))
-      case _: DecodedClass.SyntheticCompanionClass => Seq.empty
-      case anonFun: DecodedClass.SAMOrPartialFunction => Seq(anonFun.symbol)
-      case inlined: DecodedClass.InlinedClass => withCompanionIfExtendsAnyVal(inlined.underlying)
-
     val owners = withCompanionIfExtendsAnyVal(decodedClass)
     val sourceLines =
       if owners.size == 2 && method.allParameters.exists(p => p.name.matches("\\$this\\$\\d+")) then
@@ -822,6 +887,9 @@ class BinaryDecoder(using Context, ThrowOrWarn):
 
   private def matchTargetName(method: binary.Method, symbol: TermSymbol): Boolean =
     method.unexpandedDecodedNames.map(_.stripSuffix("$")).contains(symbol.targetNameStr)
+
+  private def matchTargetName(field: binary.Field, symbol: TermSymbol): Boolean =
+    field.unexpandedDecodedNames.map(_.stripSuffix("$")).contains(symbol.targetNameStr)
 
   private case class SourceParams(
       declaredParamNames: Seq[UnsignedTermName],

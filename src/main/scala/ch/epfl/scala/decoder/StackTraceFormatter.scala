@@ -10,6 +10,12 @@ import tastyquery.Types.*
 import scala.annotation.tailrec
 
 class StackTraceFormatter(using ThrowOrWarn):
+  def format(field: DecodedField): String =
+    val typeAscription = field.declaredType match
+      case tpe: Type => ": " + format(tpe)
+      case tpe => format(tpe)
+    formatOwner(field).dot(formatName(field)) + typeAscription
+
   def format(cls: DecodedClass): String =
     cls match
       case cls: DecodedClass.ClassDef => formatQualifiedName(cls.symbol)
@@ -59,6 +65,19 @@ class StackTraceFormatter(using ThrowOrWarn):
       case method: DecodedMethod.AdaptedFun => formatOwner(method.target)
       case method: DecodedMethod.SAMOrPartialFunctionConstructor => format(method.owner)
       case method: DecodedMethod.InlinedMethod => formatOwner(method.underlying)
+
+  private def formatOwner(field: DecodedField): String =
+    format(field.owner)
+
+  private def formatName(field: DecodedField): String =
+    field match
+      case field: DecodedField.ValDef => formatName(field.symbol)
+      case field: DecodedField.ModuleVal => ""
+      case field: DecodedField.LazyValOffset => "<offset " + field.index + ">"
+      case field: DecodedField.Outer => "<outer>"
+      case field: DecodedField.SerialVersionUID => "<serialVersionUID>"
+      case field: DecodedField.Capture => formatName(field.symbol).dot("<capture>")
+      case field: DecodedField.LazyValBitmap => field.name.dot("<lazy val bitmap>")
 
   private def formatName(method: DecodedMethod): String =
     method match
