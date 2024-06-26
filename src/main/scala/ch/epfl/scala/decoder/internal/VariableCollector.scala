@@ -10,35 +10,46 @@ import tastyquery.Types.*
 import tastyquery.Traversers
 import ch.epfl.scala.decoder.ThrowOrWarn
 import scala.languageFeature.postfixOps
+import tastyquery.SourceFile
 
 object VariableCollector:
-  def collectVariables(mtd: TermSymbol)(using Context, ThrowOrWarn): Set[TermSymbol] =
-    val collector = VariableCollector(mtd)
-    collector.traverse(mtd.tree)
-    collector.variable.toSet
+  def collectVariables(mtd: TermSymbol)(using Context, ThrowOrWarn): Set[LocalVariable] =
+    mtd.tree.toSet.flatMap { tree =>
+      val collector = VariableCollector(tree)
+      collector.collect()
+    }
 
-class VariableCollector(mtd: TermSymbol)(using Context, ThrowOrWarn) extends TreeTraverser:
-  val variable: mutable.Set[TermSymbol] = mutable.Set.empty
+case class LocalVariable(sym: TermSymbol, sourceFile: SourceFile, startLine: Int, endLine: Int)
+
+class VariableCollector(initialTree: Tree)(using Context, ThrowOrWarn) extends TreeTraverser:
+  val variables: mutable.Set[LocalVariable] = mutable.Set.empty
+  var previousTree: mutable.Stack[Tree] = mutable.Stack(initialTree)
+
+  def collect(): Set[LocalVariable] =
+    super.traverse(initialTree)
+    variables.toSet
 
   override def traverse(tree: Tree): Unit =
     tree match
       case _: TypeTree => ()
-      case ident: Ident =>
-        for sym <- ident.safeSymbol.collect { case sym: TermSymbol => sym } do
-          if !variable.contains(sym) then
-            if sym.isLocal then
-              variable += sym
-              if sym.isMethod || sym.isLazyVal then sym.tree.foreach(traverse)
-              else if sym.isModuleVal then sym.moduleClass.flatMap(_.tree).foreach(traverse)
-      //   case defDef: DefDef =>
-      //     // Process each ParamsClause in paramLists, each ParamsClause contains multiple parameters
-      //     defDef.paramLists.foreach(paramsClause =>
-      //     paramsClause.foreach(list => list.foreach(valDef => {
-      //         val sym = valDef.symbol.asInstanceOf[TermSymbol]
-      //         if !variable.contains(sym) && sym.isLocal then
-      //         variable += sym
-      //     }))
-      //     )
-      //     defDef.paramLists.foreach(edq => )
-      //     traverse(defDef.rhs)
-      case _ => super.traverse(tree)
+      case _: DefDef => ()
+      case valDef: ValDef =>
+        val sym = valDef.symbol.asInstanceOf[TermSymbol]
+        val parentTree = previousTree.top
+        variables +=
+          LocalVariable(
+            sym,
+            parentTree.pos.sourceFile,
+            valDef.pos.startLine + 1,
+            parentTree.pos.endLine + 1
+          )
+        traverse(valDef.rhs)
+      case bind: Bind =>
+        val parentTree = previousTree.top
+        val sym = bind.symbol.asInstanceOf[TermSymbol]
+        variables += LocalVariable(sym, parentTree.pos.sourceFile, bind.pos.startLine + 1, bind.pos.endLine + 1)
+        traverse(bind.body)
+      case _ =>
+        previousTree.push(tree)
+        super.traverse(tree)
+        previousTree.pop()

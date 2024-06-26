@@ -67,22 +67,27 @@ trait BinaryDecoderSuite extends CommonFunSuite:
         method: String,
         variable: String,
         expected: String,
+        line: Int,
         generated: Boolean = false
     )(using
         munit.Location
     ): Unit =
       val binaryVariable = loadBinaryVariable(className, method, variable)
-      val decodedVariable = decoder.decode(binaryVariable)
+      val decodedVariable = decoder.decode(binaryVariable, line)
       assertEquals(formatter.format(decodedVariable), expected)
       assertEquals(decodedVariable.isGenerated, generated)
 
-    def assertAmbiguousVariable(className: String, method: String, variable: String)(using munit.Location): Unit =
+    def assertAmbiguousVariable(className: String, method: String, variable: String, line: Int)(using
+        munit.Location
+    ): Unit =
       val binaryVariable = loadBinaryVariable(className, method, variable)
-      intercept[AmbiguousException](decoder.decode(binaryVariable))
+      intercept[AmbiguousException](decoder.decode(binaryVariable, line))
 
-    def assertNotFoundVariable(className: String, method: String, variable: String)(using munit.Location): Unit =
+    def assertNotFoundVariable(className: String, method: String, variable: String, line: Int)(using
+        munit.Location
+    ): Unit =
       val binaryVariable = loadBinaryVariable(className, method, variable)
-      intercept[NotFoundException](decoder.decode(binaryVariable))
+      intercept[NotFoundException](decoder.decode(binaryVariable, line))
 
     def assertNoSuchElementVariable(className: String, method: String, variable: String)(using munit.Location): Unit =
       intercept[NoSuchElementException](loadBinaryVariable(className, method, variable))

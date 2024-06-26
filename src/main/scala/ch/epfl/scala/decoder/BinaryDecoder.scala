@@ -177,11 +177,11 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     decodedFields.singleOrThrow(field)
   end decode
 
-  def decode(variable: binary.Variable): DecodedVariable =
+  def decode(variable: binary.Variable, sourceLine: Int): DecodedVariable =
     val decodedMethod = decode(variable.declaringMethod)
-    decode(decodedMethod, variable)
+    decode(decodedMethod, variable, sourceLine)
 
-  def decode(decodedMethod: DecodedMethod, variable: binary.Variable): DecodedVariable =
+  def decode(decodedMethod: DecodedMethod, variable: binary.Variable, sourceLine: Int): DecodedVariable =
     def tryDecode(f: PartialFunction[binary.Variable, Seq[DecodedVariable]]): Seq[DecodedVariable] =
       f.applyOrElse(variable, _ => Seq.empty[DecodedVariable])
 
@@ -190,25 +190,19 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         if xs.nonEmpty then xs else f.applyOrElse(variable, _ => Seq.empty[DecodedVariable])
     val decodedVariables = variable match
       // tryDecode {
-      case Patterns.LazyValVariable(name) =>
-        for
-          metSym <- decodedMethod.symbolOpt.toSeq
-          sym <- VariableCollector.collectVariables(metSym)
-          if name == sym.nameStr
-        yield DecodedVariable.LazyValVariable(decodedMethod, sym)
       case Patterns.CapturedVariable(name) =>
         for
           metSym <- decodedMethod.symbolOpt.toSeq
-          sym <- VariableCollector.collectVariables(metSym)
+          sym <- CaptureCollector.collectCaptures(metSym)
           if name == sym.nameStr
         yield DecodedVariable.CapturedVariable(decodedMethod, sym)
       // }.orTryDecode {
       case _ =>
         for
           metSym <- decodedMethod.symbolOpt.toSeq
-          sym <- VariableCollector.collectVariables(metSym)
-          if variable.name == sym.nameStr
-        yield DecodedVariable.LocalVariable(decodedMethod, sym)
+          localVar <- VariableCollector.collectVariables(metSym)
+          if variable.name == localVar.sym.nameStr && localVar.startLine <= sourceLine && sourceLine <= localVar.endLine
+        yield DecodedVariable.LocalVariable(decodedMethod, localVar.sym)
       // }
     decodedVariables.singleOrThrow(variable)
 
