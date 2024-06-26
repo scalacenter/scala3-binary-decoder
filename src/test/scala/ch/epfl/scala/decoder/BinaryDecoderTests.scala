@@ -81,7 +81,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     decoder.assertNoSuchElementVariable("example.A", "java.lang.Object foo()", "example.A$B$2$ B$1")
   }
 
-  test("test local lazy variable") {
+  test("local lazy val") {
     val source =
       """|package example
          |
@@ -133,7 +133,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     )
   }
 
-  test("local variable parameter") {
+  test("method parameter") {
     val source =
       """|package example
          |

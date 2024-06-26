@@ -124,40 +124,41 @@ trait BinaryDecoderSuite extends CommonFunSuite:
         expectedClasses: ExpectedCount = ExpectedCount(0),
         expectedMethods: ExpectedCount = ExpectedCount(0),
         expectedFields: ExpectedCount = ExpectedCount(0),
+        expectedVariables: ExpectedCount = ExpectedCount(0),
         printProgress: Boolean = false
     )(using munit.Location): Unit =
-      val (classCounter, methodCounter, fieldCounter) = decodeAll(printProgress)
+      val (classCounter, methodCounter, fieldCounter, variableCounter) = decodeAll(printProgress)
       if classCounter.throwables.nonEmpty then
         classCounter.printThrowables()
         classCounter.printThrowable(0)
       else if methodCounter.throwables.nonEmpty then
         methodCounter.printThrowables()
         methodCounter.printThrowable(0)
-      fieldCounter.printNotFound()
+      variableCounter.printNotFound(20)
       classCounter.check(expectedClasses)
       methodCounter.check(expectedMethods)
       fieldCounter.check(expectedFields)
+      variableCounter.check(expectedVariables)
 
-    def decodeAll(printProgress: Boolean = false): (Counter, Counter, Counter) =
+    def decodeAll(printProgress: Boolean = false): (Counter, Counter, Counter, Counter) =
       val classCounter = Counter(decoder.name + " classes")
       val methodCounter = Counter(decoder.name + " methods")
       val fieldCounter = Counter(decoder.name + " fields")
+      val variableCounter = Counter(decoder.name + " variables")
       for
         binaryClass <- decoder.allClasses
         _ = if printProgress then println(s"\"${binaryClass.name}\"")
         decodedClass <- decoder.tryDecode(binaryClass, classCounter)
-        binaryMethodOrField <- binaryClass.declaredMethods ++ binaryClass.declaredFields
-      do
-        if printProgress then println(formatDebug(binaryMethodOrField))
-        binaryMethodOrField match
-          case m: binary.Method =>
-            decoder.tryDecode(decodedClass, m, methodCounter)
-          case f: binary.Field =>
-            decoder.tryDecode(decodedClass, f, fieldCounter)
+        _ = binaryClass.declaredFields.foreach(f => decoder.tryDecode(decodedClass, f, fieldCounter))
+        binaryMethod <- binaryClass.declaredMethods
+        decodedMethod <- decoder.tryDecode(decodedClass, binaryMethod, methodCounter)
+        binaryVariable <- binaryMethod.variables
+      do decoder.tryDecode(decodedMethod, binaryVariable, variableCounter)
       classCounter.printReport()
       methodCounter.printReport()
       fieldCounter.printReport()
-      (classCounter, methodCounter, fieldCounter)
+      variableCounter.printReport()
+      (classCounter, methodCounter, fieldCounter, variableCounter)
 
     private def loadBinaryMethod(declaringType: String, method: String)(using
         munit.Location
@@ -208,15 +209,24 @@ trait BinaryDecoderSuite extends CommonFunSuite:
           counter.throwables += (cls -> e)
           None
 
-    private def tryDecode(cls: DecodedClass, mthd: binary.Method, counter: Counter): Unit =
+    private def tryDecode(cls: DecodedClass, mthd: binary.Method, counter: Counter): Option[DecodedMethod] =
       try
         val decoded = decoder.decode(cls, mthd)
         counter.success += (mthd -> decoded)
+        Some(decoded)
       catch
-        case notFound: NotFoundException => counter.notFound += (mthd -> notFound)
-        case ambiguous: AmbiguousException => counter.ambiguous += ambiguous
-        case ignored: IgnoredException => counter.ignored += ignored
-        case e => counter.throwables += (mthd -> e)
+        case notFound: NotFoundException =>
+          counter.notFound += (mthd -> notFound)
+          None
+        case ambiguous: AmbiguousException =>
+          counter.ambiguous += ambiguous
+          None
+        case ignored: IgnoredException =>
+          counter.ignored += ignored
+          None
+        case e =>
+          counter.throwables += (mthd -> e)
+          None
 
     private def tryDecode(cls: DecodedClass, field: binary.Field, counter: Counter): Unit =
       try
@@ -227,6 +237,16 @@ trait BinaryDecoderSuite extends CommonFunSuite:
         case ambiguous: AmbiguousException => counter.ambiguous += ambiguous
         case ignored: IgnoredException => counter.ignored += ignored
         case e => counter.throwables += (field -> e)
+
+    private def tryDecode(mtd: DecodedMethod, variable: binary.Variable, counter: Counter): Unit =
+      try
+        val decoded = decoder.decode(mtd, variable, variable.sourceLines.get.lines.head)
+        counter.success += (variable -> decoded)
+      catch
+        case notFound: NotFoundException => counter.notFound += (variable -> notFound)
+        case ambiguous: AmbiguousException => counter.ambiguous += ambiguous
+        case ignored: IgnoredException => counter.ignored += ignored
+        case e => counter.throwables += (variable -> e)
   end extension
 
   private def formatDebug(m: binary.Symbol): String =
@@ -314,6 +334,18 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     def printAmbiguous() =
       ambiguous.foreach { case AmbiguousException(s, candidates) =>
         println(s"${formatDebug(s)} is ambiguous:" + candidates.map(s"\n  - " + _).mkString)
+      }
+
+    // print the first n ambiguous symbols
+    def printAmbiguous(n: Int) =
+      ambiguous.take(n).foreach { case AmbiguousException(s, candidates) =>
+        println(s"${formatDebug(s)} is ambiguous:" + candidates.map(s"\n  - " + _).mkString)
+      }
+
+    def printNotFound(n: Int) =
+      notFound.take(n).foreach { case (s1, NotFoundException(s2)) =>
+        if s1 != s2 then println(s"${formatDebug(s1)} not found because of ${formatDebug(s2)}")
+        else println(s"${formatDebug(s1)} not found")
       }
 
     def printThrowable(i: Int) =

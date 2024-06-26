@@ -5,10 +5,8 @@ import ch.epfl.scala.decoder.binary.*
 import scala.collection.mutable
 import org.objectweb.asm
 import java.io.IOException
-import ch.epfl.scala.decoder.binary.SignedName
 import java.net.URLClassLoader
 import java.nio.file.Path
-import org.objectweb.asm.Type
 
 class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extends BinaryClassLoader:
   private val loadedClasses: mutable.Map[Class[?], JavaReflectClass] = mutable.Map.empty
@@ -52,11 +50,15 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
             exceptions: Array[String]
         ): asm.MethodVisitor =
           new asm.MethodVisitor(asm.Opcodes.ASM9):
-            val lines = mutable.Set.empty[Int]
             val instructions = mutable.Buffer.empty[Instruction]
             val variables = mutable.Buffer.empty[ExtraMethodInfo.Variable]
+            val labelLines = mutable.Map.empty[asm.Label, Int]
+            val labels = mutable.Buffer.empty[asm.Label]
+            override def visitLabel(label: asm.Label): Unit =
+              labels += label
             override def visitLineNumber(line: Int, start: asm.Label): Unit =
-              lines += line
+              // println("line: " + (line) + " start: " + start + " sourceName: " + sourceName)
+              labelLines += start -> line
             override def visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String): Unit =
               instructions += Instruction.Field(opcode, owner.replace('/', '.'), name, descriptor)
             override def visitMethodInsn(
@@ -78,14 +80,23 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
                 end: asm.Label,
                 index: Int
             ): Unit =
-              variables += ExtraMethodInfo.Variable(name, descriptor, signature)
+              variables += ExtraMethodInfo.Variable(name, descriptor, signature, start, end)
             override def visitEnd(): Unit =
-              allLines ++= lines
-              val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, lines.toSeq))
+              allLines ++= labelLines.values
+              val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, labelLines.values.toSeq))
+              var latestLine: Option[Int] = None
+              val labelsWithLines =
+                for
+                  label <- labels
+                  _ = labelLines.get(label).foreach(line => latestLine = Some(line))
+                  line <- latestLine
+                yield label -> line
+
               extraInfos += SignedName(name, descriptor) -> ExtraMethodInfo(
                 sourceLines,
                 instructions.toSeq,
-                variables.toSeq
+                variables.toSeq,
+                labelsWithLines.toMap
               )
     reader.accept(visitor, asm.Opcodes.ASM9)
     val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, allLines.toSeq))
