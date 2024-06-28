@@ -47,7 +47,7 @@ class VariableCollector(initialTree: Tree)(using Context, ThrowOrWarn) extends T
       case bind: Bind =>
         val parentTree = previousTree.top
         val sym = bind.symbol.asInstanceOf[TermSymbol]
-        variables += LocalVariable(sym, parentTree.pos.sourceFile, bind.pos.startLine + 1, bind.pos.endLine + 1)
+        variables += LocalVariable(sym, parentTree.pos.sourceFile, bind.pos.startLine + 1, parentTree.pos.endLine + 1)
         traverse(bind.body)
       case _ =>
         previousTree.push(tree)

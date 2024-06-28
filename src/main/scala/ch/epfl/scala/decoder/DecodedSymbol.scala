@@ -191,7 +191,7 @@ object DecodedField:
     override def toString: String = s"Capture($owner, ${symbol.showBasic})"
 
   final class LazyValBitmap(val owner: DecodedClass, val declaredType: Type, val name: String) extends DecodedField:
-    override def toString: String = s"LazyValBitmap($owner, , ${declaredType.showBasic})"
+    override def toString: String = s"LazyValBitmap($owner, ${declaredType.showBasic})"
 
 sealed trait DecodedVariable extends DecodedSymbol:
   def owner: DecodedMethod
@@ -209,7 +209,10 @@ object DecodedVariable:
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
     override def toString: String = s"VariableCapture($owner, ${symbol.showBasic})"
 
-  final class LazyValVariable(val owner: DecodedMethod, val symbol: TermSymbol) extends DecodedVariable:
+  final class This(val owner: DecodedMethod, val declaredType: ThisType) extends DecodedVariable:
+    override def toString: String = s"This($owner, ${declaredType.showBasic})"
+
+  final class DollarThis(val owner: DecodedMethod, val symbol: TermSymbol) extends DecodedVariable:
     def declaredType: TypeOrMethodic = symbol.declaredType
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
-    override def toString: String = s"LazyValVariable($owner, ${symbol.showBasic})"
+    override def toString: String = s"AnyValThis($owner, ${declaredType.showBasic})"

@@ -253,6 +253,8 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     m match
       case f: binary.Field => s"\"${f.declaringClass}\", \"${formatField(f)}\""
       case m: binary.Method => s"\"${m.declaringClass.name}\", \"${formatMethod(m)}\""
+      case v: binary.Variable =>
+        s"\"${v.declaringMethod.declaringClass.name}\", \"${formatMethod(v.declaringMethod)}\", \"${formatVariable(v)}\""
       case cls => s"\"${cls.name}\""
 
   private def formatMethod(m: binary.Method): String =

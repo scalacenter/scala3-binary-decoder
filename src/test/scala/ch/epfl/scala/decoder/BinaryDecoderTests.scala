@@ -9,6 +9,87 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  test("forwarder") {
+    val source =
+      """|package example
+         |
+         |trait A {
+         |  def foo(x: Int): Int = x
+         |}
+         |
+         |class B extends A
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.B", "int foo(int x)")
+    decoder.showVariables("example.A", "int foo$(example.A $this, int x)")
+    decoder.assertDecodeVariable("example.B", "int foo(int x)", "int x", "x: Int", 7)
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int foo$(example.A $this, int x)",
+      "example.A $this",
+      "this: A.this.type",
+      4,
+      generated = true
+    )
+  }
+
+  test("this AnyVal") {
+    val source =
+      """|package example
+         |
+         |class A(x: Int) extends AnyVal {
+         |  def foo: Int = 
+         |    x
+         |    
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A$", "int foo$extension(int $this)")
+    decoder.assertDecodeVariable(
+      "example.A$",
+      "int foo$extension(int $this)",
+      "int $this",
+      "x: Int",
+      5,
+      generated = true
+    )
+  }
+
+  test("this variable") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo: Int = 
+         |    4
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int foo()")
+    decoder.assertDecodeVariable("example.A", "int foo()", "example.A this", "this: A.this.type", 5, generated = true)
+  }
+
+  test("binds tuple and pattern matching") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo: Int = 
+         |    val x = (1, 2)
+         |    val (c, d) = (3, 4)
+         |    x match
+         |      case (a, b) => a + b
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int foo()")
+    decoder.assertDecodeVariable("example.A", "int foo()", "scala.Tuple2 x", "x: (Int, Int)", 5)
+    decoder.assertDecodeVariable("example.A", "int foo()", "int c", "c: Int", 6)
+    decoder.assertDecodeVariable("example.A", "int foo()", "int d", "d: Int", 6)
+    decoder.assertDecodeVariable("example.A", "int foo()", "int a", "a: Int", 8)
+    decoder.assertDecodeVariable("example.A", "int foo()", "int b", "b: Int", 8)
+  }
+
   test("ambiguous impossible") {
     val source =
       """|package example

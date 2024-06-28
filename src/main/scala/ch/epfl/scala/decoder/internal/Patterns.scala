@@ -170,6 +170,12 @@ object Patterns:
     def unapply(variable: binary.Variable): Option[String] =
       "(.+)\\$\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
 
+  object This:
+    def unapply(variable: binary.Variable): Boolean = variable.name == "this"
+
+  object DollarThis:
+    def unapply(variable: binary.Variable): Boolean = variable.name == "$this"
+
   object LazyValVariable:
     def unapply(variable: binary.Variable): Option[String] =
       "(.+)\\$\\d+\\$lzyVal".r.unapplySeq(variable.name).map(xs => xs(0))

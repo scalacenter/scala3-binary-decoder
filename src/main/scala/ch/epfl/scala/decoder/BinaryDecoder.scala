@@ -188,22 +188,35 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     extension (xs: Seq[DecodedVariable])
       def orTryDecode(f: PartialFunction[binary.Variable, Seq[DecodedVariable]]): Seq[DecodedVariable] =
         if xs.nonEmpty then xs else f.applyOrElse(variable, _ => Seq.empty[DecodedVariable])
-    val decodedVariables = variable match
-      // tryDecode {
+    val decodedVariables = tryDecode {
       case Patterns.CapturedVariable(name) =>
         for
           metSym <- decodedMethod.symbolOpt.toSeq
           sym <- CaptureCollector.collectCaptures(metSym)
           if name == sym.nameStr
         yield DecodedVariable.CapturedVariable(decodedMethod, sym)
-      // }.orTryDecode {
-      case _ =>
-        for
-          metSym <- decodedMethod.symbolOpt.toSeq
-          localVar <- VariableCollector.collectVariables(metSym)
-          if variable.name == localVar.sym.nameStr && localVar.startLine <= sourceLine && sourceLine <= localVar.endLine
-        yield DecodedVariable.LocalVariable(decodedMethod, localVar.sym)
-      // }
+      case Patterns.This() =>
+        decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
+      case Patterns.DollarThis() =>
+        val dollarThis = for
+          classSym <- decodedMethod.owner.companionClassSymbol.toSeq
+          if classSym.isSubClass(defn.AnyValClass)
+          sym <- classSym.declarations.collect {
+            case sym: TermSymbol if sym.isVal && !sym.isMethod => sym
+          }
+        yield DecodedVariable.DollarThis(decodedMethod, sym)
+        dollarThis match
+          case Seq(value) => Seq(value)
+          case _ => decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
+
+    }.orTryDecode { case _ =>
+      for
+        metSym <- decodedMethod.symbolOpt.toSeq
+        localVar <- VariableCollector.collectVariables(metSym)
+        if variable.name == localVar.sym.nameStr &&
+          (decodedMethod.isGenerated || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
+      yield DecodedVariable.LocalVariable(decodedMethod, localVar.sym)
+    }
     decodedVariables.singleOrThrow(variable)
 
   private def reduceAmbiguityOnClasses(syms: Seq[DecodedClass]): Seq[DecodedClass] =
