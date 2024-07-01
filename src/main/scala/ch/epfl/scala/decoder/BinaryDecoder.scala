@@ -206,8 +206,8 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           }
         yield DecodedVariable.DollarThis(decodedMethod, sym)
         dollarThis match
-          case Seq(value) => Seq(value)
-          case _ => decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
+          case Nil => decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
+          case _ => dollarThis
 
     }.orTryDecode { case _ =>
       for

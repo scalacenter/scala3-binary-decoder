@@ -85,13 +85,11 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
               allLines ++= labelLines.values
               val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, labelLines.values.toSeq))
               var latestLine: Option[Int] = None
-              val labelsWithLines =
-                for
-                  label <- labels
-                  _ = labelLines.get(label).foreach(line => latestLine = Some(line))
-                  line <- latestLine
-                yield label -> line
-
+              val labelsWithLines: mutable.Map[asm.Label, Int] = mutable.Map.empty
+              for label <- labels
+              do
+                latestLine = labelLines.get(label).orElse(latestLine)
+                latestLine.foreach(line => labelsWithLines += label -> line)
               extraInfos += SignedName(name, descriptor) -> ExtraMethodInfo(
                 sourceLines,
                 instructions.toSeq,

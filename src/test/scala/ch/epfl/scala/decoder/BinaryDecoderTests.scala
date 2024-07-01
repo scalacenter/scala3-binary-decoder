@@ -9,6 +9,36 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  test("binds") {
+    val source =
+      """|package example
+         |
+         |class B
+         |case class C(x: Int, y: String) extends B
+         |case class D(z: String) extends B
+         |case class E(v: Int) extends B
+         |case class F(w: Int) extends B
+         |
+         |class A:
+         |  private def bar(a: B) =
+         |    a match
+         |      case F(w) => w
+         |      case C(x, y) => x
+         |      case D(z) => 0
+         |      case E(v) => 1
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    // decoder.showVariables("example.A", "int bar(example.B a)")
+    // decoder.assertDecodeAll(
+    //   ExpectedCount(2),
+    //   ExpectedCount(37),
+    //   expectedFields = ExpectedCount(5)
+    // )
+    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int w", "w: Int", 13)
+    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int x", "x: Int", 14)
+
+  }
+
   test("forwarder") {
     val source =
       """|package example
