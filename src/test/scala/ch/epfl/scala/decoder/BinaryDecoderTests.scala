@@ -9,6 +9,50 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  test("lazy val capture") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo =
+         |    val y = 4
+         |    lazy val z = y + 1
+         |    def bar = z
+         |    z
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int bar$1(scala.runtime.LazyInt z$lzy1$3, int y$3)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int bar$1(scala.runtime.LazyInt z$lzy1$3, int y$3)",
+      "scala.runtime.LazyInt z$lzy1$3",
+      "z.<capture>: Int",
+      7,
+      generated = true
+    )
+
+    decoder.showVariables("example.A", "int z$lzyINIT1$1(scala.runtime.LazyInt z$lzy1$1, int y$1)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int z$lzyINIT1$1(scala.runtime.LazyInt z$lzy1$1, int y$1)",
+      "scala.runtime.LazyInt z$lzy1$1",
+      "z.<capture>: Int",
+      7,
+      generated = true
+    )
+
+    decoder.showVariables("example.A", "int z$1(scala.runtime.LazyInt z$lzy1$2, int y$2)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int z$1(scala.runtime.LazyInt z$lzy1$2, int y$2)",
+      "scala.runtime.LazyInt z$lzy1$2",
+      "z.<capture>: Int",
+      7,
+      generated = true
+    )
+  }
+
   test("anonfun capture") {
     val source =
       """|package example
@@ -22,7 +66,14 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
     decoder.showVariables("example.A", "int bar$$anonfun$1(int x$1)")
-    decoder.assertDecodeVariable("example.A", "int bar$$anonfun$1(int x$1)", "int x$1", "x.<capture>: Int", 7)
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int bar$$anonfun$1(int x$1)",
+      "int x$1",
+      "x.<capture>: Int",
+      7,
+      generated = true
+    )
   }
 
   test("binds") {
@@ -50,8 +101,8 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     //   ExpectedCount(37),
     //   expectedFields = ExpectedCount(5)
     // )
-    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int w", "w: Int", 13)
-    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int x", "x: Int", 14)
+    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int w", "w: Int", 12)
+    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int x", "x: Int", 13)
 
   }
 

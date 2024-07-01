@@ -15,7 +15,7 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
       expectedClasses = ExpectedCount(4426),
       expectedMethods = ExpectedCount(68421, ambiguous = 25, notFound = 33),
       expectedFields = ExpectedCount(12550, ambiguous = 23, notFound = 3),
-      expectedVariables = ExpectedCount(126233, ambiguous = 4484, notFound = 9314, throwables = 4)
+      expectedVariables = ExpectedCount(126550, ambiguous = 4484, notFound = 8997, throwables = 4)
     )
 
   test("scala3-compiler:3.0.2"):

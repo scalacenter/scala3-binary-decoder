@@ -189,14 +189,9 @@ class BinaryDecoder(using Context, ThrowOrWarn):
       def orTryDecode(f: PartialFunction[binary.Variable, Seq[DecodedVariable]]): Seq[DecodedVariable] =
         if xs.nonEmpty then xs else f.applyOrElse(variable, _ => Seq.empty[DecodedVariable])
     val decodedVariables = tryDecode {
-      case Patterns.CapturedVariable(name) =>
-        for
-          metTree <- decodedMethod.treeOpt.toSeq
-          sym <- CaptureCollector.collectCaptures(metTree)
-          if name == sym.nameStr
-        yield DecodedVariable.CapturedVariable(decodedMethod, sym)
-      case Patterns.This() =>
-        decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
+      case Patterns.CapturedLzyVariable(name) => decodeCapturedLzyVariable(decodedMethod, name)
+      case Patterns.CapturedVariable(name) => decodeCapturedVariable(decodedMethod, name)
+      case Patterns.This() => decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
       case Patterns.DollarThis() =>
         val dollarThis = for
           classSym <- decodedMethod.owner.companionClassSymbol.toSeq
@@ -1114,3 +1109,18 @@ class BinaryDecoder(using Context, ThrowOrWarn):
       case owner: ClassSymbol => owner :: enclosingClassOwners(owner)
       case owner: TermOrTypeSymbol => enclosingClassOwners(owner)
       case owner: PackageSymbol => Nil
+
+  private def decodeCapturedLzyVariable(decodedMethod: DecodedMethod, name: String): Seq[DecodedVariable] =
+    decodedMethod match
+      case m: DecodedMethod.LazyInit if m.symbol.nameStr == name =>
+        Seq(DecodedVariable.CapturedVariable(decodedMethod, m.symbol))
+      case m: DecodedMethod.ValOrDefDef if m.symbol.nameStr == name =>
+        Seq(DecodedVariable.CapturedVariable(decodedMethod, m.symbol))
+      case _ => decodeCapturedVariable(decodedMethod, name)
+
+  private def decodeCapturedVariable(decodedMethod: DecodedMethod, name: String): Seq[DecodedVariable] =
+    for
+      metTree <- decodedMethod.treeOpt.toSeq
+      sym <- CaptureCollector.collectCaptures(metTree)
+      if name == sym.nameStr
+    yield DecodedVariable.CapturedVariable(decodedMethod, sym)
