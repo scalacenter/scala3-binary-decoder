@@ -14,6 +14,9 @@ class JdiMethod(method: com.sun.jdi.Method) extends Method:
   override def allParameters: Seq[Parameter] =
     method.arguments.asScala.toSeq.map(JdiLocalVariable.apply(_))
 
+  override def variables: Seq[Variable] =
+    method.variables().asScala.toSeq.map(JdiVariable.apply(_, method))
+
   override def returnType: Option[Type] =
     try Some(JdiType(method.returnType))
     catch case e: com.sun.jdi.ClassNotLoadedException => None

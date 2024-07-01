@@ -5,6 +5,9 @@ import ch.epfl.scala.decoder.binary
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import ch.epfl.scala.decoder.binary.SignedName
+import ch.epfl.scala.decoder.binary.Instruction
+import org.objectweb.asm
+import ch.epfl.scala.decoder.binary.SourceLines
 
 class JavaReflectMethod(
     method: Method,
@@ -12,7 +15,6 @@ class JavaReflectMethod(
     extraInfos: ExtraMethodInfo,
     loader: JavaReflectLoader
 ) extends binary.Method:
-
   override def returnType: Option[binary.Type] =
     Option(method.getReturnType).map(loader.loadClass)
 
@@ -39,4 +41,22 @@ class JavaReflectMethod(
 
   override def sourceLines: Option[binary.SourceLines] = extraInfos.sourceLines
 
+  def sourceName: Option[String] = extraInfos.sourceLines.map(_.sourceName)
+
   override def instructions: Seq[binary.Instruction] = extraInfos.instructions
+
+  override def variables: Seq[binary.Variable] =
+    for variable <- extraInfos.variables
+    yield
+      val typeName = asm.Type.getType(variable.descriptor).getClassName
+      val sourceLines =
+        for
+          sourceName <- sourceName
+          line <- extraInfos.labels.get(variable.start)
+        yield SourceLines(sourceName, Seq(line))
+      AsmVariable(
+        variable.name,
+        loader.loadClass(typeName),
+        this,
+        sourceLines
+      )

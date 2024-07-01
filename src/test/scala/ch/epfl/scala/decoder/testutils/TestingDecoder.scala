@@ -9,6 +9,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import scala.jdk.CollectionConverters.*
 import scala.util.Properties
+import java.nio.file.FileSystem
 
 object TestingDecoder:
   def javaRuntime = JavaRuntime(Properties.jdkHome).get
@@ -43,17 +44,17 @@ class TestingDecoder(mainEntry: ClasspathEntry, val classLoader: BinaryClassLoad
     decode(binaryClass)
   def name: String = mainEntry.name
   def allClasses: Seq[binary.ClassType] =
-    val classNames = IO
-      .withinJarFile(mainEntry.absolutePath) { fs =>
-        val classMatcher = fs.getPathMatcher("glob:**.class")
-        Files
-          .walk(fs.getPath("/"): Path)
-          .filter(classMatcher.matches)
-          .iterator
-          .asScala
-          .map(_.toString.stripPrefix("/").stripSuffix(".class").replace('/', '.'))
-          .filterNot(_.endsWith("module-info"))
-          .toSeq
-      }
-      .get
+    def listClassNames(root: Path): Seq[String] =
+      val classMatcher = root.getFileSystem.getPathMatcher("glob:**.class")
+      Files
+        .walk(root)
+        .filter(classMatcher.matches)
+        .iterator
+        .asScala
+        .map(path => root.relativize(path).toString.stripPrefix("/").stripSuffix(".class").replace('/', '.'))
+        .filterNot(_.endsWith("module-info"))
+        .toSeq
+    val classNames =
+      if mainEntry.isJar then IO.withinJarFile(mainEntry.absolutePath)(fs => listClassNames(fs.getPath("/"))).get
+      else listClassNames(mainEntry.absolutePath)
     classNames.map(classLoader.loadClass)

@@ -1,6 +1,7 @@
 package ch.epfl.scala.decoder.javareflect
 
 import ch.epfl.scala.decoder.binary
+import ch.epfl.scala.decoder.binary.Variable
 import java.lang.reflect.Constructor
 import java.lang.reflect.Method
 import ch.epfl.scala.decoder.binary.SignedName
@@ -11,6 +12,8 @@ class JavaReflectConstructor(
     extraInfos: ExtraMethodInfo,
     loader: JavaReflectLoader
 ) extends binary.Method:
+
+  override def variables: Seq[Variable] = Seq.empty
 
   override def returnType: Option[binary.Type] = Some(loader.loadClass(classOf[Unit]))
 
