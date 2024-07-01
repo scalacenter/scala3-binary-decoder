@@ -151,7 +151,7 @@ class BinaryDecoder(using Context, ThrowOrWarn):
             }
           yield DecodedField.Capture(decodedClass, sym)
         case Patterns.Capture(names) =>
-          decodedClass.symbolOpt.toSeq
+          decodedClass.treeOpt.toSeq
             .flatMap(CaptureCollector.collectCaptures)
             .filter { captureSym =>
               names.exists {
@@ -191,8 +191,8 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     val decodedVariables = tryDecode {
       case Patterns.CapturedVariable(name) =>
         for
-          metSym <- decodedMethod.symbolOpt.toSeq
-          sym <- CaptureCollector.collectCaptures(metSym)
+          metTree <- decodedMethod.treeOpt.toSeq
+          sym <- CaptureCollector.collectCaptures(metTree)
           if name == sym.nameStr
         yield DecodedVariable.CapturedVariable(decodedMethod, sym)
       case Patterns.This() =>

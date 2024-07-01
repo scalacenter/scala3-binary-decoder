@@ -9,6 +9,22 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  test("anonfun capture") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo(x: => Int) = ???
+         |
+         |  def bar(x: Int) = 
+         |    foo(x)
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int bar$$anonfun$1(int x$1)")
+    decoder.assertDecodeVariable("example.A", "int bar$$anonfun$1(int x$1)", "int x$1", "x.<capture>: Int", 7)
+  }
+
   test("binds") {
     val source =
       """|package example

@@ -254,7 +254,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       case f: binary.Field => s"\"${f.declaringClass}\", \"${formatField(f)}\""
       case m: binary.Method => s"\"${m.declaringClass.name}\", \"${formatMethod(m)}\""
       case v: binary.Variable =>
-        s"\"${v.declaringMethod.declaringClass.name}\", \"${formatMethod(v.declaringMethod)}\", \"${formatVariable(v)}\""
+        s"\"${v.declaringMethod.declaringClass.name}\", \"${formatMethod(v.declaringMethod)}\", \"${formatVariable(v)}\", line ?= ${v.sourceLines.get.lines.head}"
       case cls => s"\"${cls.name}\""
 
   private def formatMethod(m: binary.Method): String =
@@ -326,6 +326,11 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       println(formatted.takeRight(10).mkString("max:\n  ", "\n  ", ""))
       println(s"mean: ${formatted.map((j, s) => s.size - j.size).sum / formatted.size}")
     end printComparisionWithJavaFormatting
+
+    def printSuccess() =
+      success.foreach { (s, d) =>
+        println(s"${formatDebug(s)}: $d")
+      }
 
     def printNotFound() =
       notFound.foreach { case (s1, NotFoundException(s2)) =>
