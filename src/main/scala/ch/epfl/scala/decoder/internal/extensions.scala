@@ -328,7 +328,7 @@ extension (field: DecodedField)
 extension (variable: DecodedVariable)
   def isGenerated: Boolean =
     variable match
-      case variable: DecodedVariable.LocalVariable => false
+      case variable: DecodedVariable.ValDef => false
       case variable: DecodedVariable.CapturedVariable => true
       case variable: DecodedVariable.This => true
-      case variable: DecodedVariable.DollarThis => true
+      case variable: DecodedVariable.AnyValThis => true

@@ -193,24 +193,24 @@ class BinaryDecoder(using Context, ThrowOrWarn):
       case Patterns.CapturedVariable(name) => decodeCapturedVariable(decodedMethod, name)
       case Patterns.This() => decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
       case Patterns.DollarThis() =>
-        val dollarThis = for
-          classSym <- decodedMethod.owner.companionClassSymbol.toSeq
-          if classSym.isSubClass(defn.AnyValClass)
-          sym <- classSym.declarations.collect {
-            case sym: TermSymbol if sym.isVal && !sym.isMethod => sym
-          }
-        yield DecodedVariable.DollarThis(decodedMethod, sym)
-        dollarThis match
-          case Nil => decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
-          case _ => dollarThis
-
+        decodedMethod match
+          case _: DecodedMethod.TraitStaticForwarder =>
+            decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
+          case _ =>
+            for
+              classSym <- decodedMethod.owner.companionClassSymbol.toSeq
+              if classSym.isSubClass(defn.AnyValClass)
+              sym <- classSym.declarations.collect {
+                case sym: TermSymbol if sym.isVal && !sym.isMethod => sym
+              }
+            yield DecodedVariable.AnyValThis(decodedMethod, sym)
     }.orTryDecode { case _ =>
       for
         metSym <- decodedMethod.symbolOpt.toSeq
         localVar <- VariableCollector.collectVariables(metSym)
         if variable.name == localVar.sym.nameStr &&
           (decodedMethod.isGenerated || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
-      yield DecodedVariable.LocalVariable(decodedMethod, localVar.sym)
+      yield DecodedVariable.ValDef(decodedMethod, localVar.sym)
     }
     decodedVariables.singleOrThrow(variable)
 

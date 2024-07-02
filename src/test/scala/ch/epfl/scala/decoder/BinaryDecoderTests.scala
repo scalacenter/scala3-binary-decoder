@@ -53,7 +53,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     )
   }
 
-  test("anonfun capture") {
+  test("by-name arg capture") {
     val source =
       """|package example
          |
@@ -106,7 +106,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
 
   }
 
-  test("forwarder") {
+  test("mixin and trait static forwarders") {
     val source =
       """|package example
          |
