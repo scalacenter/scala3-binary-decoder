@@ -92,6 +92,12 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     def assertNoSuchElementVariable(className: String, method: String, variable: String)(using munit.Location): Unit =
       intercept[NoSuchElementException](loadBinaryVariable(className, method, variable))
 
+    def assertIgnoredVariable(className: String, method: String, variable: String, reason: String)(using
+        munit.Location
+    ): Unit =
+      val binaryVariable = loadBinaryVariable(className, method, variable)
+      intercept[IgnoredException](decoder.decode(binaryVariable, 0))
+
     def assertAmbiguousField(className: String, field: String)(using munit.Location): Unit =
       val binaryField: binary.Field = loadBinaryField(className, field)
       intercept[AmbiguousException](decoder.decode(binaryField))
@@ -254,7 +260,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       case f: binary.Field => s"\"${f.declaringClass}\", \"${formatField(f)}\""
       case m: binary.Method => s"\"${m.declaringClass.name}\", \"${formatMethod(m)}\""
       case v: binary.Variable =>
-        s"\"${v.declaringMethod.declaringClass.name}\", \"${formatMethod(v.declaringMethod)}\", \"${formatVariable(v)}\", line ?= ${v.sourceLines.get.lines.head}"
+        s"\"${v.declaringMethod.declaringClass.name}\", \"${formatMethod(v.declaringMethod)}\", \"${formatVariable(v)}\" ${v.showSpan}"
       case cls => s"\"${cls.name}\""
 
   private def formatMethod(m: binary.Method): String =
@@ -333,7 +339,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       }
 
     def printNotFound() =
-      notFound.foreach { case (s1, NotFoundException(s2)) =>
+      notFound.foreach { case (s1, NotFoundException(s2, _)) =>
         if s1 != s2 then println(s"${formatDebug(s1)} not found because of ${formatDebug(s2)}")
         else println(s"${formatDebug(s1)} not found")
       }
@@ -350,9 +356,10 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       }
 
     def printNotFound(n: Int) =
-      notFound.take(n).foreach { case (s1, NotFoundException(s2)) =>
+      notFound.take(n).foreach { case (s1, NotFoundException(s2, owner)) =>
         if s1 != s2 then println(s"${formatDebug(s1)} not found because of ${formatDebug(s2)}")
-        else println(s"${formatDebug(s1)} not found")
+        else println(s"- ${formatDebug(s1)} not found")
+        owner.foreach(o => println(s"  in $o"))
       }
 
     def printThrowable(i: Int) =

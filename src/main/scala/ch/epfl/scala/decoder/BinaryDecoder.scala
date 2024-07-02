@@ -205,14 +205,11 @@ class BinaryDecoder(using Context, ThrowOrWarn):
               }
             yield DecodedVariable.AnyValThis(decodedMethod, sym)
     }.orTryDecode { case _ =>
-      for
-        metSym <- decodedMethod.symbolOpt.toSeq
-        localVar <- VariableCollector.collectVariables(metSym)
-        if variable.name == localVar.sym.nameStr &&
-          (decodedMethod.isGenerated || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
-      yield DecodedVariable.ValDef(decodedMethod, localVar.sym)
+      decodedMethod match
+        case _: DecodedMethod.Bridge => ignore(variable, "Bridge method")
+        case _ => decodeValDef(decodedMethod, variable, sourceLine)
     }
-    decodedVariables.singleOrThrow(variable)
+    decodedVariables.singleOrThrow(variable, decodedMethod)
 
   private def reduceAmbiguityOnClasses(syms: Seq[DecodedClass]): Seq[DecodedClass] =
     if syms.size > 1 then
@@ -1124,3 +1121,15 @@ class BinaryDecoder(using Context, ThrowOrWarn):
       sym <- CaptureCollector.collectCaptures(metTree)
       if name == sym.nameStr
     yield DecodedVariable.CapturedVariable(decodedMethod, sym)
+
+  private def decodeValDef(
+      decodedMethod: DecodedMethod,
+      variable: binary.Variable,
+      sourceLine: Int
+  ): Seq[DecodedVariable] =
+    for
+      metSym <- decodedMethod.symbolOpt.toSeq
+      localVar <- VariableCollector.collectVariables(metSym)
+      if variable.name == localVar.sym.nameStr &&
+        (decodedMethod.isGenerated || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
+    yield DecodedVariable.ValDef(decodedMethod, localVar.sym)

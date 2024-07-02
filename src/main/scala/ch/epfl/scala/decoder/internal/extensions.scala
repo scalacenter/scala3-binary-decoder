@@ -90,8 +90,10 @@ extension [A, S[+X] <: IterableOnce[X]](xs: S[A])
 
 extension [T <: DecodedSymbol](xs: Seq[T])
   def singleOrThrow(symbol: binary.Symbol): T =
-    singleOptOrThrow(symbol)
-      .getOrElse(notFound(symbol))
+    singleOptOrThrow(symbol).getOrElse(notFound(symbol))
+
+  def singleOrThrow(symbol: binary.Symbol, decodedOwner: DecodedSymbol): T =
+    singleOptOrThrow(symbol).getOrElse(notFound(symbol, Some(decodedOwner)))
 
   def singleOptOrThrow(symbol: binary.Symbol): Option[T] =
     if xs.size > 1 then ambiguous(symbol, xs)
