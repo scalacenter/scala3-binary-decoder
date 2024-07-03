@@ -9,6 +9,21 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  test("inlined param") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  inline def foo(x: Int): Int = x + x
+         |
+         |  def bar(y: Int) = foo(y + 2)
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int bar(int y)")
+    decoder.assertDecodeVariable("example.A", "int bar(int y)", "int x$proxy1", "x: Int", 4)
+  }
+
   test("bridge parameter") {
     val source =
       """|package example

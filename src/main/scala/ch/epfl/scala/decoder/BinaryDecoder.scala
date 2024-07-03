@@ -204,6 +204,7 @@ class BinaryDecoder(using Context, ThrowOrWarn):
                 case sym: TermSymbol if sym.isVal && !sym.isMethod => sym
               }
             yield DecodedVariable.AnyValThis(decodedMethod, sym)
+      case Patterns.Proxy(name) => decodeProxy(decodedMethod, name, sourceLine)
     }.orTryDecode { case _ =>
       decodedMethod match
         case _: DecodedMethod.Bridge => ignore(variable, "Bridge method")
@@ -1133,3 +1134,18 @@ class BinaryDecoder(using Context, ThrowOrWarn):
       if variable.name == localVar.sym.nameStr &&
         (decodedMethod.isGenerated || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
     yield DecodedVariable.ValDef(decodedMethod, localVar.sym)
+
+  private def decodeProxy(
+      decodedMethod: DecodedMethod,
+      name: String,
+      sourceLine: Int
+  ): Seq[DecodedVariable] =
+    val x =
+      for
+        metSym <- decodedMethod.symbolOpt.toSeq
+        localVar <- VariableCollector.collectVariables(metSym)
+        if name == localVar.sym.nameStr
+      // && (decodedMethod.isGenerated || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
+      yield DecodedVariable.ValDef(decodedMethod, localVar.sym)
+    val y = x
+    x
