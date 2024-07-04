@@ -140,7 +140,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       else if methodCounter.throwables.nonEmpty then
         methodCounter.printThrowables()
         methodCounter.printThrowable(0)
-      variableCounter.printNotFound(20)
+      variableCounter.printNotFound(40)
       classCounter.check(expectedClasses)
       methodCounter.check(expectedMethods)
       fieldCounter.check(expectedFields)
@@ -260,7 +260,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       case f: binary.Field => s"\"${f.declaringClass}\", \"${formatField(f)}\""
       case m: binary.Method => s"\"${m.declaringClass.name}\", \"${formatMethod(m)}\""
       case v: binary.Variable =>
-        s"\"${v.declaringMethod.declaringClass.name}\", \"${formatMethod(v.declaringMethod)}\", \"${formatVariable(v)}\" ${v.showSpan}"
+        s"\"${v.declaringMethod.declaringClass.name}\",\n        \"${formatMethod(v.declaringMethod)}\",\n        \"${formatVariable(v)}, \"${v.showSpan}"
       case cls => s"\"${cls.name}\""
 
   private def formatMethod(m: binary.Method): String =
@@ -358,8 +358,8 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     def printNotFound(n: Int) =
       notFound.take(n).foreach { case (s1, NotFoundException(s2, owner)) =>
         if s1 != s2 then println(s"${formatDebug(s1)} not found because of ${formatDebug(s2)}")
-        else println(s"- ${formatDebug(s1)} not found")
-        owner.foreach(o => println(s"  in $o"))
+        else println(s"- ${formatDebug(s1)} not found " + owner.map(o => s"in ${o.getClass.getSimpleName()}"))
+        println("")
       }
 
     def printThrowable(i: Int) =
@@ -371,6 +371,11 @@ trait BinaryDecoderSuite extends CommonFunSuite:
     def printThrowables() = throwables.foreach { (sym, t) =>
       println(s"${formatDebug(sym)} $t")
     }
+
+    def printNThrowables(n: Int) =
+      throwables.take(n).foreach { (sym, t) =>
+        println(s"${formatDebug(sym)} $t")
+      }
 
     def check(expected: ExpectedCount)(using munit.Location): Unit =
       assertEquals(success.size, expected.success)

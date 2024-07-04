@@ -9,6 +9,28 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  test("inlinded this") {
+    val source =
+      """|package example
+         |
+         |class A(x: Int):
+         |  inline def foo: Int = x + x
+         |
+         |class B:
+         |  def bar(a: A) = a.foo
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.B", "int bar(example.A a)")
+    decoder.assertDecodeVariable(
+      "example.B",
+      "int bar(example.A a)",
+      "example.A A_this",
+      "this: A.this.type",
+      7,
+      generated = true
+    )
+  }
+
   test("inlined param") {
     val source =
       """|package example
@@ -122,7 +144,8 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
          |  private def bar(a: B) =
          |    a match
          |      case F(w) => w
-         |      case C(x, y) => x
+         |      case C(x, y) =>
+         |        x
          |      case D(z) => 0
          |      case E(v) => 1
          |""".stripMargin
@@ -134,7 +157,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     //   expectedFields = ExpectedCount(5)
     // )
     decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int w", "w: Int", 12)
-    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int x", "x: Int", 13)
+    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int x", "x: Int", 14)
 
   }
 
@@ -375,6 +398,8 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     decoder.showVariables("example.A", "int foo()")
     decoder.assertDecodeVariable("example.A", "int foo()", "int x", "x: Int", 6)
   }
+
+abstract class others(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 

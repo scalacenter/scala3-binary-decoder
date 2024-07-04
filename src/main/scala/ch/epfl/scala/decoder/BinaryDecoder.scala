@@ -204,7 +204,8 @@ class BinaryDecoder(using Context, ThrowOrWarn):
                 case sym: TermSymbol if sym.isVal && !sym.isMethod => sym
               }
             yield DecodedVariable.AnyValThis(decodedMethod, sym)
-      case Patterns.Proxy(name) => decodeProxy(decodedMethod, name, sourceLine)
+      case Patterns.Proxy(name) => decodeProxy(decodedMethod, name)
+      case Patterns.UnderscoreThis() => decodeInlinedThis(decodedMethod, variable)
     }.orTryDecode { case _ =>
       decodedMethod match
         case _: DecodedMethod.Bridge => ignore(variable, "Bridge method")
@@ -1133,19 +1134,29 @@ class BinaryDecoder(using Context, ThrowOrWarn):
       localVar <- VariableCollector.collectVariables(metSym)
       if variable.name == localVar.sym.nameStr &&
         (decodedMethod.isGenerated || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
-    yield DecodedVariable.ValDef(decodedMethod, localVar.sym)
+    yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
 
   private def decodeProxy(
       decodedMethod: DecodedMethod,
-      name: String,
-      sourceLine: Int
+      name: String
   ): Seq[DecodedVariable] =
-    val x =
-      for
-        metSym <- decodedMethod.symbolOpt.toSeq
-        localVar <- VariableCollector.collectVariables(metSym)
-        if name == localVar.sym.nameStr
-      // && (decodedMethod.isGenerated || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
-      yield DecodedVariable.ValDef(decodedMethod, localVar.sym)
-    val y = x
-    x
+    for
+      metSym <- decodedMethod.symbolOpt.toSeq
+      localVar <- VariableCollector.collectVariables(metSym)
+      if name == localVar.sym.nameStr
+    yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
+
+  private def decodeInlinedThis(
+      decodedMethod: DecodedMethod,
+      variable: binary.Variable
+  ): Seq[DecodedVariable] =
+    val decodedClassSym = variable.`type` match
+      case cls: binary.ClassType => decode(cls).classSymbol
+      case _ => None
+    for
+      metSym <- decodedMethod.symbolOpt.toSeq
+      decodedClassSym <- decodedClassSym.toSeq
+      if VariableCollector.collectVariables(metSym).exists { localVar =>
+        localVar.sym == decodedClassSym
+      }
+    yield DecodedVariable.This(decodedMethod, decodedClassSym.thisType)
