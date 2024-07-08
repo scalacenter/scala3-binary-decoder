@@ -9,6 +9,43 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  test("SAMOrPartialFunctionImpl") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo(x: Int) = 
+         |    val xs = List(x, x + 1, x + 2)
+         |    xs.collect { case z if z % 2 == 0 => z }
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A$$anon$1", "boolean isDefinedAt(int x)")
+    decoder.assertDecodeVariable(
+      "example.A$$anon$1",
+      "boolean isDefinedAt(int x)",
+      "int x",
+      "x: A",
+      6
+    )
+    decoder.assertDecodeVariable(
+      "example.A$$anon$1",
+      "boolean isDefinedAt(int x)",
+      "int z",
+      "z: Int",
+      6
+    )
+
+    decoder.showVariables("example.A$$anon$1", "java.lang.Object applyOrElse(int x, scala.Function1 default)")
+    decoder.assertDecodeVariable(
+      "example.A$$anon$1",
+      "java.lang.Object applyOrElse(int x, scala.Function1 default)",
+      "scala.Function1 default",
+      "default: A1 => B1",
+      6
+    )
+  }
+
   test("inlinded this") {
     val source =
       """|package example

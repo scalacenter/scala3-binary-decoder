@@ -13,9 +13,9 @@ import scala.languageFeature.postfixOps
 import tastyquery.SourceFile
 
 object VariableCollector:
-  def collectVariables(sym: TermSymbol)(using Context, ThrowOrWarn): Set[LocalVariable] =
+  def collectVariables(tree: Tree, sym: Option[TermSymbol] = None)(using Context, ThrowOrWarn): Set[LocalVariable] =
     val collector = VariableCollector()
-    collector.collect(sym)
+    collector.collect(tree, sym)
 
 trait LocalVariable:
   def sym: Symbol
@@ -35,7 +35,7 @@ end LocalVariable
 class VariableCollector()(using Context, ThrowOrWarn) extends TreeTraverser:
   private val inlinedVariables = mutable.Map.empty[TermSymbol, Set[LocalVariable]]
 
-  def collect(sym: TermSymbol): Set[LocalVariable] =
+  def collect(tree: Tree, sym: Option[TermSymbol] = None): Set[LocalVariable] =
     val variables: mutable.Set[LocalVariable] = mutable.Set.empty
     var previousTree: mutable.Stack[Tree] = mutable.Stack.empty
 
@@ -76,21 +76,23 @@ class VariableCollector()(using Context, ThrowOrWarn) extends TreeTraverser:
               )
           }
 
-    allOuterClasses(sym).foreach(cls =>
-      variables += LocalVariable.This(
-        cls,
-        cls.pos.sourceFile,
-        if cls.pos.isUnknown then -1 else cls.pos.startLine + 1,
-        if cls.pos.isUnknown then -1 else cls.pos.endLine + 1
+    sym
+      .flatMap(allOuterClasses)
+      .foreach(cls =>
+        variables += LocalVariable.This(
+          cls,
+          cls.pos.sourceFile,
+          if cls.pos.isUnknown then -1 else cls.pos.startLine + 1,
+          if cls.pos.isUnknown then -1 else cls.pos.endLine + 1
+        )
       )
-    )
-    sym.tree.foreach(Traverser.traverse)
+    Traverser.traverse(tree)
     variables.toSet
   end collect
 
   private def collectInlineDef(symbol: TermSymbol): Set[LocalVariable] =
     inlinedVariables(symbol) = Set.empty // break recursion
-    collect(symbol)
+    symbol.tree.toSet.flatMap(tree => collect(tree, Some(symbol)))
 
   private def allOuterClasses(sym: Symbol): List[ClassSymbol] =
     def loop(sym: Symbol, acc: List[ClassSymbol]): List[ClassSymbol] =

@@ -140,6 +140,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       else if methodCounter.throwables.nonEmpty then
         methodCounter.printThrowables()
         methodCounter.printThrowable(0)
+      else if variableCounter.throwables.nonEmpty then variableCounter.printThrowable(0)
       variableCounter.printNotFound(40)
       classCounter.check(expectedClasses)
       methodCounter.check(expectedMethods)
@@ -260,7 +261,10 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       case f: binary.Field => s"\"${f.declaringClass}\", \"${formatField(f)}\""
       case m: binary.Method => s"\"${m.declaringClass.name}\", \"${formatMethod(m)}\""
       case v: binary.Variable =>
-        s"\"${v.declaringMethod.declaringClass.name}\",\n        \"${formatMethod(v.declaringMethod)}\",\n        \"${formatVariable(v)}, \"${v.showSpan}"
+        s"\"${v.declaringMethod.declaringClass.name}\",\n        \"${formatMethod(
+            v.declaringMethod
+          )}\",\n        \"${formatVariable(v)}\",\n        \"\",\n        ${v.sourceLines.get.lines.head}, "
+      // s"\"${v.showSpan}"
       case cls => s"\"${cls.name}\""
 
   private def formatMethod(m: binary.Method): String =

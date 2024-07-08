@@ -188,7 +188,7 @@ object Patterns:
     def unapply(variable: binary.Variable): Option[String] =
       "(.+)\\$proxy\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
 
-  object UnderscoreThis:
+  object InlinedThis:
     def unapply(variable: binary.Variable): Boolean = variable.name.endsWith("_this")
 
   extension (field: binary.Field)

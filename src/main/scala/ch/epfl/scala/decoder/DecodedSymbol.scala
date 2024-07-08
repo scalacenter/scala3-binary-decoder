@@ -146,6 +146,7 @@ object DecodedMethod:
     override def owner: DecodedClass = target.owner
     override def declaredType: TypeOrMethodic = target.declaredType
     override def symbolOpt: Option[TermSymbol] = target.symbolOpt
+    override def treeOpt: Option[Tree] = target.treeOpt
     override def toString: String = s"AdaptedFun($target)"
 
   final class SAMOrPartialFunctionConstructor(val owner: DecodedClass, val declaredType: Type) extends DecodedMethod:
@@ -209,7 +210,7 @@ object DecodedVariable:
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
     override def toString: String = s"VariableCapture($owner, ${symbol.showBasic})"
 
-  final class This(val owner: DecodedMethod, val declaredType: ThisType) extends DecodedVariable:
+  final class This(val owner: DecodedMethod, val declaredType: Type) extends DecodedVariable:
     override def toString: String = s"This($owner, ${declaredType.showBasic})"
 
   final class AnyValThis(val owner: DecodedMethod, val symbol: TermSymbol) extends DecodedVariable:

@@ -254,7 +254,10 @@ extension (self: DecodedClass)
 
   def linearization(using Context): Seq[ClassSymbol] = classSymbol.toSeq.flatMap(_.linearization)
 
-  def thisType(using Context): Option[ThisType] = classSymbol.map(_.thisType)
+  def thisType(using Context): Option[Type] = self match
+    case self: DecodedClass.SAMOrPartialFunction => Some(self.tpe)
+    case inlined: DecodedClass.InlinedClass => inlined.underlying.thisType
+    case _ => classSymbol.map(_.thisType)
 
   def companionClass(using Context): Option[DecodedClass] =
     self.companionClassSymbol.map(DecodedClass.ClassDef(_))
