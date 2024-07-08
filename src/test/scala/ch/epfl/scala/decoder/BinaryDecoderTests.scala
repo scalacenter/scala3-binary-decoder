@@ -24,7 +24,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     decoder.showVariables("example.A", "int factAcc$$anonfun$1(int acc$tailLocal1$1, int _$1)")
     // decoder.assertDecodeVariable("example.A", "int factAcc$$anonfun$1(int acc$tailLocal1$1, int _$1)", "int acc$tailLocal1$1", "acc.<capture>: Int", 6)
   }
-  
+
   test("SAMOrPartialFunctionImpl") {
     val source =
       """|package example

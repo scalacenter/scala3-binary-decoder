@@ -203,7 +203,7 @@ class BinaryDecoder(using Context, ThrowOrWarn):
           decodedMethod.treeOpt.toSeq
             .flatMap(decodeValDef(decodedMethod)(_, variable, sourceLine))
             .orIfEmpty(
-              decodeSAMOrPartialFun(decodedMethod)(
+              decodeSAMOrPartialFunOrMixinForwarder(decodedMethod)(
                 decodedMethod.implementedSymbol,
                 variable,
                 sourceLine,
@@ -211,6 +211,8 @@ class BinaryDecoder(using Context, ThrowOrWarn):
               )
             )
         case _: DecodedMethod.Bridge => ignore(variable, "Bridge method")
+        case decodedMethod: DecodedMethod.MixinForwarder =>
+          decodedMethod.symbolOpt.toSeq.flatMap(decodeSAMOrPartialFunOrMixinForwarder(decodedMethod)(_, variable, sourceLine))
         case _ => decodedMethod.treeOpt.toSeq.flatMap(decodeValDef(decodedMethod)(_, variable, sourceLine))
     }
     decodedVariables.singleOrThrow(variable, decodedMethod)
@@ -1140,7 +1142,7 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         (!checkLines || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
     yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
 
-  private def decodeSAMOrPartialFun(
+  private def decodeSAMOrPartialFunOrMixinForwarder(
       decodedMethod: DecodedMethod
   )(
       owner: TermSymbol,
