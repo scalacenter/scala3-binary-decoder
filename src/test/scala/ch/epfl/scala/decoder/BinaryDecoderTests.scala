@@ -9,6 +9,22 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  test("tailLocal variables") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  @annotation.tailrec
+         |  private def factAcc(x: Int, acc: Int): Int =
+         |    if x <= 1 then List(1, 2).map(_ * acc).sum
+         |    else factAcc(x - 1, x * acc)
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int factAcc$$anonfun$1(int acc$tailLocal1$1, int _$1)")
+    // decoder.assertDecodeVariable("example.A", "int factAcc$$anonfun$1(int acc$tailLocal1$1, int _$1)", "int acc$tailLocal1$1", "acc.<capture>: Int", 6)
+  }
+  
   test("SAMOrPartialFunctionImpl") {
     val source =
       """|package example

@@ -174,6 +174,10 @@ object Patterns:
     def unapply(variable: binary.Variable): Option[String] =
       "(.+)\\$\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
 
+  object CapturedTailLocalVariable:
+    def unapply(variable: binary.Variable): Option[String] =
+      "(.+)\\$tailLocal\\d+(\\$\\d+)?".r.unapplySeq(variable.name).map(xs => xs(0))
+
   object This:
     def unapply(variable: binary.Variable): Boolean = variable.name == "this"
 

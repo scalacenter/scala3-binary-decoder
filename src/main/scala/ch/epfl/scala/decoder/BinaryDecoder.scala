@@ -191,6 +191,7 @@ class BinaryDecoder(using Context, ThrowOrWarn):
         if xs.nonEmpty then xs else f.applyOrElse(variable, _ => Seq.empty[DecodedVariable])
     val decodedVariables = tryDecode {
       case Patterns.CapturedLzyVariable(name) => decodeCapturedLzyVariable(decodedMethod, name)
+      case Patterns.CapturedTailLocalVariable(name) => decodeCapturedVariable(decodedMethod, name)
       case Patterns.CapturedVariable(name) => decodeCapturedVariable(decodedMethod, name)
       case Patterns.This() => decodedMethod.owner.thisType.toSeq.map(DecodedVariable.This(decodedMethod, _))
       case Patterns.DollarThis() => decodeDollarThis(decodedMethod)
