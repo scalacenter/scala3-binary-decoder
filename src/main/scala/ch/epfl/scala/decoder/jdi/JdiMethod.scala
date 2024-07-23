@@ -32,7 +32,7 @@ class JdiMethod(method: com.sun.jdi.Method) extends Method:
   override def isConstructor: Boolean = method.isConstructor
 
   override def sourceLines: Option[SourceLines] =
-    Some(SourceLines(declaringClass.sourceName, allLineLocations.map(_.lineNumber)))
+    declaringClass.sourceName.map(SourceLines(_, allLineLocations.map(_.lineNumber)))
 
   override def signedName: SignedName = SignedName(name, signature)
 

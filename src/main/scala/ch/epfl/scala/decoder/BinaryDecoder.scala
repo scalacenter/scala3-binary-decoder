@@ -200,20 +200,17 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     }.orTryDecode { case _ =>
       decodedMethod match
         case decodedMethod: DecodedMethod.SAMOrPartialFunctionImpl =>
-          decodedMethod.treeOpt.toSeq
-            .flatMap(decodeValDef(decodedMethod)(_, variable, sourceLine))
+          decodeValDef(decodedMethod, variable, sourceLine)
             .orIfEmpty(
-              decodeSAMOrPartialFunOrMixinForwarder(decodedMethod)(
+              decodeSAMOrPartialFun(
+                decodedMethod,
                 decodedMethod.implementedSymbol,
                 variable,
-                sourceLine,
-                checkLines = false
+                sourceLine
               )
             )
         case _: DecodedMethod.Bridge => ignore(variable, "Bridge method")
-        case decodedMethod: DecodedMethod.MixinForwarder =>
-          decodedMethod.symbolOpt.toSeq.flatMap(decodeSAMOrPartialFunOrMixinForwarder(decodedMethod)(_, variable, sourceLine))
-        case _ => decodedMethod.treeOpt.toSeq.flatMap(decodeValDef(decodedMethod)(_, variable, sourceLine))
+        case _ => decodeValDef(decodedMethod, variable, sourceLine)
     }
     decodedVariables.singleOrThrow(variable, decodedMethod)
 
@@ -1129,26 +1126,30 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     yield DecodedVariable.CapturedVariable(decodedMethod, sym)
 
   private def decodeValDef(
-      decodedMethod: DecodedMethod
-  )(
-      tree: Tree,
+      decodedMethod: DecodedMethod,
       variable: binary.Variable,
-      sourceLine: Int,
-      checkLines: Boolean = !decodedMethod.isGenerated
-  ): Seq[DecodedVariable] =
-    for
-      localVar <- VariableCollector.collectVariables(tree).toSeq
-      if variable.name == localVar.sym.nameStr &&
-        (!checkLines || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
-    yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
+      sourceLine: Int
+  ): Seq[DecodedVariable] = decodedMethod.symbolOpt match
+    case Some(owner: TermSymbol) if owner.sourceLanguage == SourceLanguage.Scala2 =>
+      for
+        paramSym <- owner.paramSymss.collect { case Left(value) => value }.flatten
+        if variable.name == paramSym.nameStr
+      yield DecodedVariable.ValDef(decodedMethod, paramSym)
+    case _ =>
+      for
+        tree <- decodedMethod.treeOpt.toSeq
+        localVar <- VariableCollector.collectVariables(tree).toSeq
+        if variable.name == localVar.sym.nameStr &&
+          (decodedMethod.isGenerated || !variable.declaringMethod.sourceLines.exists(x =>
+            localVar.sourceFile.name.endsWith(x.sourceName)
+          ) || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
+      yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
 
-  private def decodeSAMOrPartialFunOrMixinForwarder(
-      decodedMethod: DecodedMethod
-  )(
+  private def decodeSAMOrPartialFun(
+      decodedMethod: DecodedMethod,
       owner: TermSymbol,
       variable: binary.Variable,
-      sourceLine: Int,
-      checkLines: Boolean = !decodedMethod.isGenerated
+      sourceLine: Int
   ): Seq[DecodedVariable] =
     if owner.sourceLanguage == SourceLanguage.Scala2 then
       val x =
@@ -1160,8 +1161,7 @@ class BinaryDecoder(using Context, ThrowOrWarn):
     else
       for
         localVar <- owner.tree.toSeq.flatMap(t => VariableCollector.collectVariables(t))
-        if variable.name == localVar.sym.nameStr &&
-          (!checkLines || (localVar.startLine <= sourceLine && sourceLine <= localVar.endLine))
+        if variable.name == localVar.sym.nameStr
       yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
 
   private def unexpandedSymName(sym: Symbol): String =

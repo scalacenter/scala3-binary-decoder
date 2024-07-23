@@ -19,6 +19,7 @@ object VariableCollector:
 
 trait LocalVariable:
   def sym: Symbol
+  def sourceFile: SourceFile
   def startLine: Int
   def endLine: Int
 
@@ -29,6 +30,7 @@ object LocalVariable:
     def sym: Symbol = underlying.sym
     def startLine: Int = underlying.startLine
     def endLine: Int = underlying.endLine
+    def sourceFile: SourceFile = underlying.sourceFile
 
 end LocalVariable
 

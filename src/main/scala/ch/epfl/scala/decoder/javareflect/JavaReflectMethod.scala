@@ -41,8 +41,6 @@ class JavaReflectMethod(
 
   override def sourceLines: Option[binary.SourceLines] = extraInfos.sourceLines
 
-  def sourceName: Option[String] = extraInfos.sourceLines.map(_.sourceName)
-
   override def instructions: Seq[binary.Instruction] = extraInfos.instructions
 
   override def variables: Seq[binary.Variable] =

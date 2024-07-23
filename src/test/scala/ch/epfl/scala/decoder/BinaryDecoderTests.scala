@@ -9,6 +9,19 @@ class Scala3LtsBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.lts
 class Scala3NextBinaryDecoderTests extends BinaryDecoderTests(ScalaVersion.`3.next`)
 
 abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
+  def isScala33 = scalaVersion.isScala33
+  def isScala34 = scalaVersion.isScala34
+
+  test("scala3-compiler:3.3.1"):
+    val decoder = initDecoder("org.scala-lang", "scala3-compiler_3", "3.3.1")
+    decoder.assertDecodeVariable(
+      "scala.quoted.runtime.impl.QuoteMatcher$",
+      "scala.Option treeMatch(dotty.tools.dotc.ast.Trees$Tree scrutineeTree, dotty.tools.dotc.ast.Trees$Tree patternTree, dotty.tools.dotc.core.Contexts$Context x$3)",
+      "scala.util.boundary$Break ex",
+      "ex: Break[T]",
+      128
+    )
+
   test("tailLocal variables") {
     val source =
       """|package example
@@ -62,7 +75,7 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     )
   }
 
-  test("inlinded this") {
+  test("inlined this") {
     val source =
       """|package example
          |
@@ -451,10 +464,6 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
     decoder.showVariables("example.A", "int foo()")
     decoder.assertDecodeVariable("example.A", "int foo()", "int x", "x: Int", 6)
   }
-
-abstract class others(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
-  def isScala33 = scalaVersion.isScala33
-  def isScala34 = scalaVersion.isScala34
 
   test("capture value class") {
     val source =
@@ -2691,6 +2700,12 @@ abstract class others(scalaVersion: ScalaVersion) extends BinaryDecoderSuite:
       "dotty.tools.dotc.ast.Trees$Tree dotty$tools$dotc$core$tasty$TreeUnpickler$TreeReader$$_$_$$anonfun$18(dotty.tools.dotc.core.Contexts$Context x$1$19, dotty.tools.dotc.core.tasty.TreeUnpickler$TreeReader $this$tailLocal1$1)",
       "TreeUnpickler.readTpt.<static forwarder>()(using Contexts.Context): tpd.Tree",
       generated = true
+    )
+    decoder.assertNotFoundVariable(
+      "scala.quoted.runtime.impl.QuotesImpl$reflect$defn$",
+      "dotty.tools.dotc.core.Symbols$Symbol TupleClass(int arity)",
+      "dotty.tools.dotc.core.Types$TypeRef x$proxy1",
+      2816
     )
 
   test("tasty-query#412"):
