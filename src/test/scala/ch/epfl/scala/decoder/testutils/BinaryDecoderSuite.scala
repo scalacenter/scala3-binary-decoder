@@ -141,7 +141,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
         methodCounter.printThrowables()
         methodCounter.printThrowable(0)
       else if variableCounter.throwables.nonEmpty then variableCounter.printThrowable(0)
-      variableCounter.printNotFound(40)
+      // variableCounter.printNotFound(40)
       classCounter.check(expectedClasses)
       methodCounter.check(expectedMethods)
       fieldCounter.check(expectedFields)

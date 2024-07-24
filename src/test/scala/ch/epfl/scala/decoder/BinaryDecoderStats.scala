@@ -23,7 +23,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       expectedClasses = ExpectedCount(3859, notFound = 3),
       expectedMethods = ExpectedCount(60762, ambiguous = 24, notFound = 163),
-      expectedFields = ExpectedCount(10670, ambiguous = 23, notFound = 6)
+      expectedFields = ExpectedCount(10674, ambiguous = 19, notFound = 6),
+      expectedVariables = ExpectedCount(112306, ambiguous = 4443, notFound = 2187)
     )
 
   test("io.github.vigoo:zio-aws-ec2_3:4.0.5 - slow".ignore):
@@ -38,7 +39,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       expectedClasses = ExpectedCount(10),
       expectedMethods = ExpectedCount(218),
-      expectedFields = ExpectedCount(45)
+      expectedFields = ExpectedCount(45),
+      expectedVariables = ExpectedCount(194, ambiguous = 1, notFound = 45)
     )
 
   test("net.zygfryd:jackshaft_3:0.2.2".ignore):
@@ -50,10 +52,11 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       expectedClasses = ExpectedCount(245),
       expectedMethods = ExpectedCount(2755, notFound = 92),
-      expectedFields = ExpectedCount(298)
+      expectedFields = ExpectedCount(298),
+      expectedVariables = ExpectedCount(4541, ambiguous = 58, notFound = 38)
     )
 
-  test("org.clulab:processors-main_3:8.5.3"):
+  test("org.clulab:processors-main_3:8.5.3".ignore):
     assume(!isCI)
     val repository = MavenRepository("http://artifactory.cs.arizona.edu:8081/artifactory/sbt-release")
     val decoder = initDecoder("org.clulab", "processors-main_3", "8.5.3", FetchOptions(repositories = Seq(repository)))
@@ -67,7 +70,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       ExpectedCount(27),
       ExpectedCount(174, notFound = 2),
-      expectedFields = ExpectedCount(20, ambiguous = 4)
+      expectedFields = ExpectedCount(20, ambiguous = 4),
+      expectedVariables = ExpectedCount(253, ambiguous = 3, notFound = 6)
     )
 
   test("com.zengularity:benji-google_3:2.2.1".ignore):
@@ -97,7 +101,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       ExpectedCount(149, notFound = 9),
       ExpectedCount(3546, notFound = 59),
-      expectedFields = ExpectedCount(144, notFound = 2)
+      expectedFields = ExpectedCount(144, notFound = 2),
+      expectedVariables = ExpectedCount(14750, ambiguous = 275, notFound = 39)
     )
 
   test("com.evolution:scache_3:5.1.2"):
@@ -108,7 +113,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       ExpectedCount(105),
       ExpectedCount(1509),
-      expectedFields = ExpectedCount(161)
+      expectedFields = ExpectedCount(161),
+      expectedVariables = ExpectedCount(3150, ambiguous = 51, notFound = 9)
     )
 
   test("com.github.j5ik2o:docker-controller-scala-dynamodb-local_:1.15.34"):
@@ -119,7 +125,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       ExpectedCount(2),
       ExpectedCount(37),
-      expectedFields = ExpectedCount(5)
+      expectedFields = ExpectedCount(5),
+      expectedVariables = ExpectedCount(30)
     )
 
   test("eu.ostrzyciel.jelly:jelly-grpc_3:0.5.3"):
@@ -128,7 +135,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       ExpectedCount(24),
       ExpectedCount(353),
-      expectedFields = ExpectedCount(61)
+      expectedFields = ExpectedCount(61),
+      expectedVariables = ExpectedCount(443, ambiguous = 3, notFound = 2)
     )
 
   test("com.devsisters:zio-agones_3:0.1.0"):
@@ -138,7 +146,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       ExpectedCount(83, notFound = 26),
       ExpectedCount(2804, ambiguous = 2, notFound = 5),
-      expectedFields = ExpectedCount(258)
+      expectedFields = ExpectedCount(258),
+      expectedVariables = ExpectedCount(3706, ambiguous = 17, notFound = 1, throwables = 48)
     )
 
   test("org.log4s:log4s_3:1.10.0".ignore):
@@ -165,7 +174,8 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       ExpectedCount(19),
       ExpectedCount(158),
-      expectedFields = ExpectedCount(32, ambiguous = 4, notFound = 2)
+      expectedFields = ExpectedCount(32, ambiguous = 4, notFound = 2),
+      expectedVariables = ExpectedCount(204, notFound = 2)
     )
 
   test("io.github.valdemargr:gql-core_3:0.3.3"):
@@ -173,5 +183,6 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
     decoder.assertDecodeAll(
       ExpectedCount(531),
       ExpectedCount(7267, ambiguous = 4, notFound = 1),
-      expectedFields = ExpectedCount(851, notFound = 2)
+      expectedFields = ExpectedCount(851, notFound = 2),
+      expectedVariables = ExpectedCount(14771, ambiguous = 313, notFound = 26)
     )
