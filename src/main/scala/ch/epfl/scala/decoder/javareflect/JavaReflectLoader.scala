@@ -5,7 +5,6 @@ import ch.epfl.scala.decoder.binary.*
 import scala.collection.mutable
 import org.objectweb.asm
 import java.io.IOException
-import ch.epfl.scala.decoder.binary.SignedName
 import java.net.URLClassLoader
 import java.nio.file.Path
 
@@ -16,8 +15,12 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
     loadedClasses.getOrElseUpdate(cls, doLoadClass(cls))
 
   override def loadClass(name: String): JavaReflectClass =
-    val cls = classLoader.loadClass(name)
-    loadClass(cls)
+    name match
+      case s"$tpe[]" =>
+        val componentType = loadClass(tpe)
+        JavaReflectClass.array(componentType)
+      case _ =>
+        JavaReflectClass.primitives.getOrElse(name, loadClass(classLoader.loadClass(name)))
 
   private def doLoadClass(cls: Class[?]): JavaReflectClass =
     val extraInfo =
@@ -47,10 +50,15 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
             exceptions: Array[String]
         ): asm.MethodVisitor =
           new asm.MethodVisitor(asm.Opcodes.ASM9):
-            val lines = mutable.Set.empty[Int]
             val instructions = mutable.Buffer.empty[Instruction]
+            val variables = mutable.Buffer.empty[ExtraMethodInfo.Variable]
+            val labelLines = mutable.Map.empty[asm.Label, Int]
+            val labels = mutable.Buffer.empty[asm.Label]
+            override def visitLabel(label: asm.Label): Unit =
+              labels += label
             override def visitLineNumber(line: Int, start: asm.Label): Unit =
-              lines += line
+              // println("line: " + (line) + " start: " + start + " sourceName: " + sourceName)
+              labelLines += start -> line
             override def visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String): Unit =
               instructions += Instruction.Field(opcode, owner.replace('/', '.'), name, descriptor)
             override def visitMethodInsn(
@@ -61,10 +69,33 @@ class JavaReflectLoader(classLoader: ClassLoader, loadExtraInfo: Boolean) extend
                 isInterface: Boolean
             ): Unit =
               instructions += Instruction.Method(opcode, owner.replace('/', '.'), name, descriptor, isInterface)
+              // We should fix the compiler instead
+              // if descriptor.startsWith("(Lscala/runtime/Lazy") then
+              //   variables += ExtraMethodInfo.Variable(name + "$lzyVal", descriptor.substring(descriptor.indexOf(')') + 1), null)
+            override def visitLocalVariable(
+                name: String,
+                descriptor: String,
+                signature: String,
+                start: asm.Label,
+                end: asm.Label,
+                index: Int
+            ): Unit =
+              variables += ExtraMethodInfo.Variable(name, descriptor, signature, start, end)
             override def visitEnd(): Unit =
-              allLines ++= lines
-              val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, lines.toSeq))
-              extraInfos += SignedName(name, descriptor) -> ExtraMethodInfo(sourceLines, instructions.toSeq)
+              allLines ++= labelLines.values
+              val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, labelLines.values.toSeq))
+              var latestLine: Option[Int] = None
+              val labelsWithLines: mutable.Map[asm.Label, Int] = mutable.Map.empty
+              for label <- labels
+              do
+                latestLine = labelLines.get(label).orElse(latestLine)
+                latestLine.foreach(line => labelsWithLines += label -> line)
+              extraInfos += SignedName(name, descriptor) -> ExtraMethodInfo(
+                sourceLines,
+                instructions.toSeq,
+                variables.toSeq,
+                labelsWithLines.toMap
+              )
     reader.accept(visitor, asm.Opcodes.ASM9)
     val sourceLines = Option.when(sourceName.nonEmpty)(SourceLines(sourceName, allLines.toSeq))
     ExtraClassInfo(sourceLines, extraInfos.toMap)

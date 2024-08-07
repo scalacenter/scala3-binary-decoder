@@ -90,8 +90,10 @@ extension [A, S[+X] <: IterableOnce[X]](xs: S[A])
 
 extension [T <: DecodedSymbol](xs: Seq[T])
   def singleOrThrow(symbol: binary.Symbol): T =
-    singleOptOrThrow(symbol)
-      .getOrElse(notFound(symbol))
+    singleOptOrThrow(symbol).getOrElse(notFound(symbol))
+
+  def singleOrThrow(symbol: binary.Symbol, decodedOwner: DecodedSymbol): T =
+    singleOptOrThrow(symbol).getOrElse(notFound(symbol, Some(decodedOwner)))
 
   def singleOptOrThrow(symbol: binary.Symbol): Option[T] =
     if xs.size > 1 then ambiguous(symbol, xs)
@@ -252,7 +254,10 @@ extension (self: DecodedClass)
 
   def linearization(using Context): Seq[ClassSymbol] = classSymbol.toSeq.flatMap(_.linearization)
 
-  def thisType(using Context): Option[ThisType] = classSymbol.map(_.thisType)
+  def thisType(using Context): Option[Type] = self match
+    case self: DecodedClass.SAMOrPartialFunction => Some(self.tpe)
+    case inlined: DecodedClass.InlinedClass => inlined.underlying.thisType
+    case _ => classSymbol.map(_.thisType)
 
   def companionClass(using Context): Option[DecodedClass] =
     self.companionClassSymbol.map(DecodedClass.ClassDef(_))
@@ -324,3 +329,11 @@ extension (field: DecodedField)
       case field: DecodedField.SerialVersionUID => true
       case field: DecodedField.Capture => true
       case field: DecodedField.LazyValBitmap => true
+
+extension (variable: DecodedVariable)
+  def isGenerated: Boolean =
+    variable match
+      case variable: DecodedVariable.ValDef => false
+      case variable: DecodedVariable.CapturedVariable => true
+      case variable: DecodedVariable.This => true
+      case variable: DecodedVariable.AnyValThis => true

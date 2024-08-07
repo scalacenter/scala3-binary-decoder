@@ -10,6 +10,27 @@ import tastyquery.Types.*
 import scala.annotation.tailrec
 
 class StackTraceFormatter(using ThrowOrWarn):
+  def format(variable: DecodedVariable): String =
+    val typeAscription = variable.declaredType match
+      case tpe: Type => ": " + format(tpe)
+      case tpe => format(tpe)
+    val test1 = formatOwner(variable)
+    val test2 = formatName(variable)
+    formatName(variable) + typeAscription
+
+  def formatMethodSignatures(input: String): String = {
+    def dotArray(input: Array[String]): String = {
+      if input.length == 1 then input(0)
+      else input(0) + "." + dotArray(input.tail)
+    }
+    val array =
+      for str <- input.split('.')
+      yield
+        if str.contains(": ") then "{" + str + "}"
+        else str
+    dotArray(array)
+  }
+
   def format(field: DecodedField): String =
     val typeAscription = field.declaredType match
       case tpe: Type => ": " + format(tpe)
@@ -69,6 +90,9 @@ class StackTraceFormatter(using ThrowOrWarn):
   private def formatOwner(field: DecodedField): String =
     format(field.owner)
 
+  private def formatOwner(variable: DecodedVariable): String =
+    format(variable.owner)
+
   private def formatName(field: DecodedField): String =
     field match
       case field: DecodedField.ValDef => formatName(field.symbol)
@@ -78,6 +102,13 @@ class StackTraceFormatter(using ThrowOrWarn):
       case field: DecodedField.SerialVersionUID => "<serialVersionUID>"
       case field: DecodedField.Capture => formatName(field.symbol).dot("<capture>")
       case field: DecodedField.LazyValBitmap => field.name.dot("<lazy val bitmap>")
+
+  private def formatName(variable: DecodedVariable): String =
+    variable match
+      case variable: DecodedVariable.ValDef => formatName(variable.symbol)
+      case variable: DecodedVariable.CapturedVariable => formatName(variable.symbol).dot("<capture>")
+      case variable: DecodedVariable.This => "this"
+      case variable: DecodedVariable.AnyValThis => formatName(variable.symbol)
 
   private def formatName(method: DecodedMethod): String =
     method match

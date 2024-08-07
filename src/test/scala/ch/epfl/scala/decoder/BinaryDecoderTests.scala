@@ -12,6 +12,459 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
   def isScala33 = scalaVersion.isScala33
   def isScala34 = scalaVersion.isScala34
 
+  test("scala3-compiler:3.3.1"):
+    val decoder = initDecoder("org.scala-lang", "scala3-compiler_3", "3.3.1")
+    decoder.assertDecodeVariable(
+      "scala.quoted.runtime.impl.QuoteMatcher$",
+      "scala.Option treeMatch(dotty.tools.dotc.ast.Trees$Tree scrutineeTree, dotty.tools.dotc.ast.Trees$Tree patternTree, dotty.tools.dotc.core.Contexts$Context x$3)",
+      "scala.util.boundary$Break ex",
+      "ex: Break[T]",
+      128
+    )
+
+  test("tailLocal variables") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  @annotation.tailrec
+         |  private def factAcc(x: Int, acc: Int): Int =
+         |    if x <= 1 then List(1, 2).map(_ * acc).sum
+         |    else factAcc(x - 1, x * acc)
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int factAcc$$anonfun$1(int acc$tailLocal1$1, int _$1)")
+    // decoder.assertDecodeVariable("example.A", "int factAcc$$anonfun$1(int acc$tailLocal1$1, int _$1)", "int acc$tailLocal1$1", "acc.<capture>: Int", 6)
+  }
+
+  test("SAMOrPartialFunctionImpl") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo(x: Int) = 
+         |    val xs = List(x, x + 1, x + 2)
+         |    xs.collect { case z if z % 2 == 0 => z }
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A$$anon$1", "boolean isDefinedAt(int x)")
+    decoder.assertDecodeVariable(
+      "example.A$$anon$1",
+      "boolean isDefinedAt(int x)",
+      "int x",
+      "x: A",
+      6
+    )
+    decoder.assertDecodeVariable(
+      "example.A$$anon$1",
+      "boolean isDefinedAt(int x)",
+      "int z",
+      "z: Int",
+      6
+    )
+
+    decoder.showVariables("example.A$$anon$1", "java.lang.Object applyOrElse(int x, scala.Function1 default)")
+    decoder.assertDecodeVariable(
+      "example.A$$anon$1",
+      "java.lang.Object applyOrElse(int x, scala.Function1 default)",
+      "scala.Function1 default",
+      "default: A1 => B1",
+      6
+    )
+  }
+
+  test("inlined this") {
+    val source =
+      """|package example
+         |
+         |class A(x: Int):
+         |  inline def foo: Int = x + x
+         |
+         |class B:
+         |  def bar(a: A) = a.foo
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.B", "int bar(example.A a)")
+    decoder.assertDecodeVariable(
+      "example.B",
+      "int bar(example.A a)",
+      "example.A A_this",
+      "this: A.this.type",
+      7,
+      generated = true
+    )
+  }
+
+  test("inlined param") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  inline def foo(x: Int): Int = x + x
+         |
+         |  def bar(y: Int) = foo(y + 2)
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int bar(int y)")
+    decoder.assertDecodeVariable("example.A", "int bar(int y)", "int x$proxy1", "x: Int", 4)
+  }
+
+  test("bridge parameter") {
+    val source =
+      """|package example
+         |class A
+         |class B extends A
+         |
+         |class C:
+         |  def foo(x: Int): A = new A
+         |
+         |class D extends C:
+         |  override def foo(y: Int): B = new B
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.D", "example.A foo(int x)")
+    decoder.assertIgnoredVariable("example.D", "example.A foo(int x)", "int x", "Bridge")
+  }
+
+  test("lazy val capture") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo =
+         |    val y = 4
+         |    lazy val z = y + 1
+         |    def bar = z
+         |    z
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int bar$1(scala.runtime.LazyInt z$lzy1$3, int y$3)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int bar$1(scala.runtime.LazyInt z$lzy1$3, int y$3)",
+      "scala.runtime.LazyInt z$lzy1$3",
+      "z.<capture>: Int",
+      7,
+      generated = true
+    )
+
+    decoder.showVariables("example.A", "int z$lzyINIT1$1(scala.runtime.LazyInt z$lzy1$1, int y$1)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int z$lzyINIT1$1(scala.runtime.LazyInt z$lzy1$1, int y$1)",
+      "scala.runtime.LazyInt z$lzy1$1",
+      "z.<capture>: Int",
+      7,
+      generated = true
+    )
+
+    decoder.showVariables("example.A", "int z$1(scala.runtime.LazyInt z$lzy1$2, int y$2)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int z$1(scala.runtime.LazyInt z$lzy1$2, int y$2)",
+      "scala.runtime.LazyInt z$lzy1$2",
+      "z.<capture>: Int",
+      7,
+      generated = true
+    )
+  }
+
+  test("by-name arg capture") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo(x: => Int) = ???
+         |
+         |  def bar(x: Int) = 
+         |    foo(x)
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int bar$$anonfun$1(int x$1)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int bar$$anonfun$1(int x$1)",
+      "int x$1",
+      "x.<capture>: Int",
+      7,
+      generated = true
+    )
+  }
+
+  test("binds") {
+    val source =
+      """|package example
+         |
+         |class B
+         |case class C(x: Int, y: String) extends B
+         |case class D(z: String) extends B
+         |case class E(v: Int) extends B
+         |case class F(w: Int) extends B
+         |
+         |class A:
+         |  private def bar(a: B) =
+         |    a match
+         |      case F(w) => w
+         |      case C(x, y) =>
+         |        x
+         |      case D(z) => 0
+         |      case E(v) => 1
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    // decoder.showVariables("example.A", "int bar(example.B a)")
+    // decoder.assertDecodeAll(
+    //   ExpectedCount(2),
+    //   ExpectedCount(37),
+    //   expectedFields = ExpectedCount(5)
+    // )
+    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int w", "w: Int", 12)
+    decoder.assertDecodeVariable("example.A", "int bar(example.B a)", "int x", "x: Int", 14)
+
+  }
+
+  test("mixin and trait static forwarders") {
+    val source =
+      """|package example
+         |
+         |trait A {
+         |  def foo(x: Int): Int = x
+         |}
+         |
+         |class B extends A
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.B", "int foo(int x)")
+    decoder.showVariables("example.A", "int foo$(example.A $this, int x)")
+    decoder.assertDecodeVariable("example.B", "int foo(int x)", "int x", "x: Int", 7)
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int foo$(example.A $this, int x)",
+      "example.A $this",
+      "this: A.this.type",
+      4,
+      generated = true
+    )
+  }
+
+  test("this AnyVal") {
+    val source =
+      """|package example
+         |
+         |class A(x: Int) extends AnyVal {
+         |  def foo: Int = 
+         |    x
+         |    
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A$", "int foo$extension(int $this)")
+    decoder.assertDecodeVariable(
+      "example.A$",
+      "int foo$extension(int $this)",
+      "int $this",
+      "x: Int",
+      5,
+      generated = true
+    )
+  }
+
+  test("this variable") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo: Int = 
+         |    4
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int foo()")
+    decoder.assertDecodeVariable("example.A", "int foo()", "example.A this", "this: A.this.type", 5, generated = true)
+  }
+
+  test("binds tuple and pattern matching") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo: Int = 
+         |    val x = (1, 2)
+         |    val (c, d) = (3, 4)
+         |    x match
+         |      case (a, b) => a + b
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int foo()")
+    decoder.assertDecodeVariable("example.A", "int foo()", "scala.Tuple2 x", "x: (Int, Int)", 5)
+    decoder.assertDecodeVariable("example.A", "int foo()", "int c", "c: Int", 6)
+    decoder.assertDecodeVariable("example.A", "int foo()", "int d", "d: Int", 6)
+    decoder.assertDecodeVariable("example.A", "int foo()", "int a", "a: Int", 8)
+    decoder.assertDecodeVariable("example.A", "int foo()", "int b", "b: Int", 8)
+  }
+
+  test("ambiguous impossible") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo(a: Boolean) =
+         |    if (a) {val x = 1} else {val x = 2}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "void foo(boolean a)")
+    decoder.assertAmbiguousVariable("example.A", "void foo(boolean a)", "int x", 5)
+  }
+
+  test("ambiguous variables 2") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo() =
+         |    var i = 0
+         |    while i < 10 do
+         |      val x = i
+         |      i += 1
+         |    val x = 17
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "void foo()")
+    decoder.assertDecodeVariable("example.A", "void foo()", "int x", "x: Int", line = 7)
+    decoder.assertDecodeVariable("example.A", "void foo()", "int x", "x: Int", line = 9)
+  }
+
+  test("ambiguous variables") {
+    val source =
+      """|package example
+         |
+         |class A :
+         |  def foo(a: Boolean) =
+         |    if a then
+         |      val x = 1
+         |      x
+         |    else
+         |      val x = "2"
+         |      x
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "java.lang.Object foo(boolean a)")
+    decoder.assertDecodeVariable("example.A", "java.lang.Object foo(boolean a)", "int x", "x: Int", line = 7)
+    decoder.assertDecodeVariable(
+      "example.A",
+      "java.lang.Object foo(boolean a)",
+      "java.lang.String x",
+      "x: String",
+      line = 9
+    )
+  }
+
+  test("local object") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo() =
+         |    object B
+         |    B
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "java.lang.Object foo()")
+    decoder.assertNoSuchElementVariable("example.A", "java.lang.Object foo()", "example.A$B$2$ B$1")
+  }
+
+  test("local lazy val") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo() =
+         |    lazy val x: Int = 1
+         |    x
+         |
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int foo()")
+    decoder.assertNoSuchElementVariable("example.A", "int foo()", "int x$1$lzyVal")
+  }
+
+  test("array") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo() = 
+         |    val x = Array(1, 2, 3)
+         |    x
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int[] foo()")
+    decoder.assertDecodeVariable("example.A", "int[] foo()", "int[] x", "x: Array[Int]", 6)
+  }
+
+  test("captured param in a local def") {
+    val source =
+      """|package example
+         |
+         |class A {
+         |  def foo(x: Int) = {
+         |    def bar() = x
+         |  }
+         |}
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int bar$1(int x$1)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "int bar$1(int x$1)",
+      "int x$1",
+      "x.<capture>: Int",
+      5,
+      generated = true
+    )
+  }
+
+  test("method parameter") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo(y: String) =
+         |    println(y)
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "void foo(java.lang.String y)")
+    decoder.assertDecodeVariable(
+      "example.A",
+      "void foo(java.lang.String y)",
+      "java.lang.String y",
+      "y: String",
+      5
+    )
+  }
+
+  test("local variable") {
+    val source =
+      """|package example
+         |
+         |class A:
+         |  def foo =
+         |    val x: Int = 1
+         |    x
+         |""".stripMargin
+    val decoder = TestingDecoder(source, scalaVersion)
+    decoder.showVariables("example.A", "int foo()")
+    decoder.assertDecodeVariable("example.A", "int foo()", "int x", "x: Int", 6)
+  }
+
   test("capture value class") {
     val source =
       """|package example
@@ -2247,6 +2700,12 @@ abstract class BinaryDecoderTests(scalaVersion: ScalaVersion) extends BinaryDeco
       "dotty.tools.dotc.ast.Trees$Tree dotty$tools$dotc$core$tasty$TreeUnpickler$TreeReader$$_$_$$anonfun$18(dotty.tools.dotc.core.Contexts$Context x$1$19, dotty.tools.dotc.core.tasty.TreeUnpickler$TreeReader $this$tailLocal1$1)",
       "TreeUnpickler.readTpt.<static forwarder>()(using Contexts.Context): tpd.Tree",
       generated = true
+    )
+    decoder.assertNotFoundVariable(
+      "scala.quoted.runtime.impl.QuotesImpl$reflect$defn$",
+      "dotty.tools.dotc.core.Symbols$Symbol TupleClass(int arity)",
+      "dotty.tools.dotc.core.Types$TypeRef x$proxy1",
+      2816
     )
 
   test("tasty-query#412"):
