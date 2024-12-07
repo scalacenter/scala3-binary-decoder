@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: coursier/setup-action@v1.3.8
+      - uses: coursier/setup-action@v1.3.9
         with:
           apps: scalafmt
       - run: scalafmt --test
@@ -41,7 +41,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
-    - uses: coursier/setup-action@v1.3.8
+    - uses: coursier/setup-action@v1.3.9
       with:
         jvm: ${{ matrix.jvm }}
         apps: sbt
