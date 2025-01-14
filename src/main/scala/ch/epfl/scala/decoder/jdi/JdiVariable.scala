@@ -10,3 +10,5 @@ class JdiVariable(variable: com.sun.jdi.LocalVariable, method: com.sun.jdi.Metho
   override def name: String = variable.name
   override def sourceLines: Option[SourceLines] = None
   override def `type`: Type = JdiType(variable.`type`)
+
+  override def toString: String = variable.toString

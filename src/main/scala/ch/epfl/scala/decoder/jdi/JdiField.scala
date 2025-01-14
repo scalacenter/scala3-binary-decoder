@@ -11,3 +11,5 @@ class JdiField(field: com.sun.jdi.Field) extends Field:
   override def name: String = field.name
   override def sourceLines: Option[SourceLines] = None
   override def `type`: Type = JdiType(field.`type`)
+
+  override def toString: String = field.toString

@@ -5,5 +5,4 @@ trait Symbol:
   def sourceLines: Option[SourceLines]
   def sourceName: Option[String] = sourceLines.map(_.sourceName)
 
-  def showSpan: String =
-    sourceLines.map(_.showSpan).getOrElse("")
+  def showSpan: String = sourceLines.map(_.showSpan).getOrElse("")
