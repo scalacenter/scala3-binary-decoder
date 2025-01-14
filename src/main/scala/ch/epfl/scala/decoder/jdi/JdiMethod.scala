@@ -43,3 +43,5 @@ class JdiMethod(method: com.sun.jdi.Method) extends Method:
   private def signature: String = method.signature
 
   private def bytecodes: Array[Byte] = method.bytecodes
+
+  override def toString: String = method.toString

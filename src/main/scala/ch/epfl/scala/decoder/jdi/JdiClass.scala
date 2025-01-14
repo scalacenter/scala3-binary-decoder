@@ -43,3 +43,5 @@ class JdiClass(ref: com.sun.jdi.ReferenceType) extends JdiType(ref) with ClassTy
   override def sourceName: Option[String] = Option(ref.sourceName)
 
   private def visibleMethods: Seq[JdiMethod] = ref.visibleMethods.asScala.map(JdiMethod(_)).toSeq
+
+  override def toString: String = ref.toString
