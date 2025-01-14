@@ -170,10 +170,10 @@ object Patterns:
 
   object CapturedLzyVariable:
     def unapply(field: binary.Field): Option[Seq[String]] =
-      field.extractFromDecodedNames("(.+)\\$lzy1\\$\\d+".r)(xs => xs(0))
+      field.extractFromDecodedNames("(.+)\\$lzy\\d+\\$\\d+".r)(xs => xs(0))
 
     def unapply(variable: binary.Variable): Option[String] =
-      "(.+)\\$lzy1\\$\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
+      "(.+)\\$lzy\\d+\\$\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
 
   object LazyValBitmap:
     def unapply(field: binary.Field): Option[String] =
