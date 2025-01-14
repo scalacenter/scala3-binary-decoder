@@ -178,6 +178,7 @@ class StackTraceFormatter(using ThrowOrWarn):
   private def format(name: Name): String =
     def rec(name: Name): String = name match
       case DefaultGetterName(termName, num) => s"${termName.toString()}.<default ${num + 1}>"
+      case SimpleTypeName("<FromJavaObject>") => "Object"
       case name: TypeName => rec(name.toTermName)
       case SimpleName("$anonfun") => "<anon fun>"
       case SimpleName("$anon") => "<anon class>"

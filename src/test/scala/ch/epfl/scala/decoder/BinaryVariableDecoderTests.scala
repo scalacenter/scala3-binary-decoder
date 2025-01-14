@@ -545,3 +545,11 @@ abstract class BinaryVariableDecoderTests(scalaVersion: ScalaVersion) extends Bi
       276,
       "buf: ListBuffer[Types.TermRef]"
     )
+    // decode from Java class
+    decoder.assertDecodeVariable(
+      "dotty.tools.io.JDK9Reflectors",
+      "java.util.jar.JarFile newJarFile(java.io.File arg0, boolean arg1, int arg2, java.lang.Object arg3)",
+      "java.lang.Object arg3",
+      63,
+      "x$3: Object"
+    )

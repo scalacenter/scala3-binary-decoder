@@ -76,8 +76,14 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
       owner <- decodedMethod.symbolOpt.toSeq.collect { case sym: TermSymbol => sym }
       params <- owner.paramSymss.collect { case Left(value) => value }
       sym <- params
-      if variable.name == sym.nameStr
+      if variable.name == sym.nameStr || matchEmptyName(variable, sym)
     yield DecodedVariable.ValDef(decodedMethod, sym)
+
+  private def matchEmptyName(variable: binary.Variable, sym: TermSymbol): Boolean =
+    val EmptyName = "(arg|x\\$)(\\d+)".r
+    (variable.name, sym.nameStr) match
+      case (EmptyName(_, x), EmptyName(_, y)) => x == y
+      case _ => false
 
   private def decodeValDef(
       decodedMethod: DecodedMethod,
