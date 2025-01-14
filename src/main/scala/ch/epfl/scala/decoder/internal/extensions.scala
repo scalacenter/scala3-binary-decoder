@@ -308,7 +308,7 @@ extension (method: DecodedMethod)
       case method: DecodedMethod.ValOrDefDef =>
         val sym = method.symbol
         def isThreadUnsafe = sym.hasAnnotation(Definitions.threadUnsafeClass)
-        (sym.isGetter && (!sym.isModuleOrLazyVal && !sym.owner.isTrait && !isThreadUnsafe)) || // getter
+        (sym.isGetter && (!sym.isModuleOrLazyVal || !sym.owner.isTrait) && !isThreadUnsafe) || // getter
         (sym.isLocal && sym.isModuleOrLazyVal) || // local def
         sym.isSetter ||
         (sym.isSynthetic && !sym.isLocal) ||
