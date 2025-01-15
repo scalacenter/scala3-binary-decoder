@@ -298,12 +298,14 @@ abstract class BinaryVariableDecoderTests(scalaVersion: ScalaVersion) extends Bi
          |
          |class A(x: Int) extends AnyVal {
          |  def foo: Int = 
-         |    x
+         |    Seq(1, 2).map(_ + x).sum
          |    
          |}
          |""".stripMargin
     val decoder = TestingDecoder(source, scalaVersion)
     decoder.assertDecodeVariable("example.A$", "int foo$extension(int $this)", "int $this", 5, "x: Int")
+    decoder.assertDecodeVariable("example.A$", "int foo$extension$$anonfun$1(int $this$1, int _$1)", "int $this$1", 5, "x.<capture>: Int")
+    decoder.assertDecodeVariable("example.A$", "int foo$extension$$anonfun$1(int $this$1, int _$1)", "int _$1", 5, "<anon>: Int")
   }
 
   test("parameters of mixin and trait static forwarders") {

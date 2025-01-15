@@ -25,6 +25,7 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
         if variable.declaringMethod.isConstructor then decodeClassCapture(decodedMethod, variable, name)
         else decodeCapturedLzyVariable(decodedMethod, variable, name)
       case Patterns.CapturedTailLocalVariable(name) => decodeMethodCapture(decodedMethod, variable, name)
+      case Patterns.AnyValCapture() => decodeAnyValCapture(decodedMethod)
       case Patterns.Capture(name) =>
         if variable.declaringMethod.isConstructor then decodeClassCapture(decodedMethod, variable, name)
         else decodeMethodCapture(decodedMethod, variable, name)
@@ -173,6 +174,16 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
             case sym: TermSymbol if sym.isVal && !sym.isMethod => sym
           }
         yield DecodedVariable.AnyValThis(decodedMethod, sym)
+
+
+  private def decodeAnyValCapture(decodedMethod: DecodedMethod): Seq[DecodedVariable] =
+    for
+      classSym <- decodedMethod.owner.companionClassSymbol.toSeq
+      if classSym.isSubClass(defn.AnyValClass)
+      sym <- classSym.declarations.collect {
+        case sym: TermSymbol if sym.isVal && !sym.isMethod => sym
+      }
+    yield DecodedVariable.CapturedVariable(decodedMethod, sym)
 
   private def matchCaptureType(sym: TermSymbol, binaryTpe: binary.Type): Boolean =
     if sym.isModuleOrLazyVal then binaryTpe.isLazy

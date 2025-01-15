@@ -157,8 +157,9 @@ object Patterns:
     def unapply(field: binary.Field): Boolean = field.name == "serialVersionUID"
 
   object AnyValCapture:
-    def unapply(field: binary.Field): Boolean =
-      field.name.matches("\\$this\\$\\d+")
+    def unapply(field: binary.Field): Boolean = unapply(field.name)
+    def unapply(variable: binary.Variable): Boolean = unapply(variable.name)
+    private def unapply(name: String): Boolean = name.matches("\\$this\\$\\d+")
 
   object Capture:
     def unapply(field: binary.Field): Option[Seq[String]] =
