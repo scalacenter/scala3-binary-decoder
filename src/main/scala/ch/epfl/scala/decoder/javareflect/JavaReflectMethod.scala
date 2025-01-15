@@ -32,8 +32,9 @@ class JavaReflectMethod(
         val sourceLines =
           for
             sourceName <- sourceName
-            line <- extraInfos.labels.get(variable.start)
-          yield binary.SourceLines(sourceName, Seq(line))
+            lines = extraInfos.debugLines(variable)
+            if lines.nonEmpty
+          yield binary.SourceLines(sourceName, lines)
         AsmVariable(variable.name, loader.loadClass(typeName), this, sourceLines, isParameter)
     parameters ++ localVariables
 

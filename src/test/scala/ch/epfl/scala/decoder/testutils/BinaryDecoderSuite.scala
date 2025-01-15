@@ -127,7 +127,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       if classCounter.throwables.nonEmpty then classCounter.printThrowable(0)
       else if methodCounter.throwables.nonEmpty then methodCounter.printThrowable(0)
       else if variableCounter.throwables.nonEmpty then variableCounter.printThrowable(0)
-      // variableCounter.printNotFound(40)
+      variableCounter.printNotFound(40)
       classCounter.check(expectedClasses)
       methodCounter.check(expectedMethods)
       fieldCounter.check(expectedFields)
@@ -147,8 +147,11 @@ trait BinaryDecoderSuite extends CommonFunSuite:
         decodedMethod <- decoder.tryDecode(decodedClass, binaryMethod, methodCounter)
         binaryVariable <- binaryMethod.variables
         sourceLines <- binaryVariable.sourceLines
-        line <- sourceLines.lines.headOption
-      do decoder.tryDecode(decodedMethod, binaryVariable, line, variableCounter)
+        if sourceLines.lines.nonEmpty
+      do
+        // It's tricky to guess a valid debug line. But in practice, it seems the middle one is a good guess.
+        val line = sourceLines.lines(sourceLines.lines.size / 2)
+        decoder.tryDecode(decodedMethod, binaryVariable, line, variableCounter)
       classCounter.printReport()
       methodCounter.printReport()
       fieldCounter.printReport()
