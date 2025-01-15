@@ -220,3 +220,6 @@ object DecodedVariable:
     def declaredType: TypeOrMethodic = symbol.declaredType
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
     override def toString: String = s"AnyValThis($owner, ${declaredType.showBasic})"
+
+  final class SetterParam(val owner: DecodedMethod.SetterAccessor, val declaredType: Type) extends DecodedVariable:
+    override def toString: String = s"SetterParam($owner, ${declaredType.showBasic})"

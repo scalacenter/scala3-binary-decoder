@@ -73,12 +73,16 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
     yield DecodedVariable.CapturedVariable(decodedMethod, sym)
 
   private def decodeParameter(decodedMethod: DecodedMethod, variable: binary.Variable): Seq[DecodedVariable] =
-    for
-      owner <- decodedMethod.symbolOpt.toSeq.collect { case sym: TermSymbol => sym }
-      params <- owner.paramSymss.collect { case Left(value) => value }
-      sym <- params
-      if variable.name == sym.nameStr || matchEmptyName(variable, sym)
-    yield DecodedVariable.ValDef(decodedMethod, sym)
+    decodedMethod match
+      case m: DecodedMethod.SetterAccessor if !m.symbol.isMethod && variable.name == "x$0" =>
+        Seq(DecodedVariable.SetterParam(m, m.symbol.declaredType.asInstanceOf[Type]))
+      case _ =>
+        for
+          owner <- decodedMethod.symbolOpt.toSeq.collect { case sym: TermSymbol => sym }
+          params <- owner.paramSymss.collect { case Left(value) => value }
+          sym <- params
+          if variable.name == sym.nameStr || matchEmptyName(variable, sym)
+        yield DecodedVariable.ValDef(decodedMethod, sym)
 
   private def matchEmptyName(variable: binary.Variable, sym: TermSymbol): Boolean =
     val EmptyName = "(arg|x\\$)(\\d+)".r

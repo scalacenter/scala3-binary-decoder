@@ -555,3 +555,10 @@ abstract class BinaryVariableDecoderTests(scalaVersion: ScalaVersion) extends Bi
       63,
       "x$3: Object"
     )
+    decoder.assertDecodeVariable(
+      "dotty.tools.repl.package$$anon$1",
+      "void dotty$tools$dotc$reporting$UniqueMessagePositions$_setter_$dotty$tools$dotc$reporting$UniqueMessagePositions$$positions_$eq(scala.collection.mutable.HashMap x$0)",
+      "scala.collection.mutable.HashMap x$0",
+      8,
+      "x$0: HashMap[(SourceFile, Integer), Diagnostic]"
+    )
