@@ -41,7 +41,9 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
             .orIfEmpty(decodeSAMOrPartialFun(decodedMethod, decodedMethod.implementedSymbol, variable, sourceLine))
         case _: DecodedMethod.Bridge => ignore(variable, "Bridge method")
         case _ =>
-          if variable.isParameter then decodeParameter(decodedMethod, variable)
+          if variable.isParameter then
+            decodeParameter(decodedMethod, variable)
+              .orIfEmpty(decodeValDef(decodedMethod, variable, sourceLine)) // if the method returns a contextual function
           else if variable.declaringMethod.isConstructor then
             decodeValDef(decodedMethod, variable, sourceLine)
               .orIfEmpty(decodeLocalValDefInConstructor(decodedMethod, variable, sourceLine))
