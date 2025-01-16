@@ -15,7 +15,7 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
       expectedClasses = ExpectedCount(4426),
       expectedMethods = ExpectedCount(68421, ambiguous = 25, notFound = 33),
       expectedFields = ExpectedCount(12549, ambiguous = 26, notFound = 1),
-      expectedVariables = ExpectedCount(141931, ambiguous = 1817, notFound = 1666),
+      expectedVariables = ExpectedCount(142024, ambiguous = 1885, notFound = 1505),
       // classFilter = Set("scala.quoted.runtime.impl.QuoteMatcher$")
     )
 
@@ -25,7 +25,7 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
       expectedClasses = ExpectedCount(3859, notFound = 3),
       expectedMethods = ExpectedCount(60762, ambiguous = 24, notFound = 163),
       expectedFields = ExpectedCount(10672, ambiguous = 21, notFound = 6),
-      expectedVariables = ExpectedCount(122975, ambiguous = 1563, notFound = 1474)
+      expectedVariables = ExpectedCount(123036, ambiguous = 1599, notFound = 1377)
     )
 
   test("io.github.vigoo:zio-aws-ec2_3:4.0.5 - slow".ignore):
@@ -115,7 +115,7 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
       ExpectedCount(105),
       ExpectedCount(1509),
       expectedFields = ExpectedCount(161),
-      expectedVariables = ExpectedCount(3352, ambiguous = 22, notFound = 5)
+      expectedVariables = ExpectedCount(3354, ambiguous = 22, notFound = 3)
     )
 
   test("com.github.j5ik2o:docker-controller-scala-dynamodb-local_:1.15.34"):
@@ -148,7 +148,7 @@ class BinaryDecoderStats extends BinaryDecoderSuite:
       ExpectedCount(83, notFound = 26),
       ExpectedCount(2804, ambiguous = 2, notFound = 5),
       expectedFields = ExpectedCount(258),
-      expectedVariables = ExpectedCount(3916, notFound = 1, throwables = 22)
+      expectedVariables = ExpectedCount(3936, ambiguous = 2, notFound = 1)
     )
 
   test("org.log4s:log4s_3:1.10.0".ignore):

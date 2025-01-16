@@ -18,7 +18,8 @@ sealed trait LiftedTree[S]:
 
   def inlinedFrom: List[InlineCall] = Nil
   def inlinedArgs: Map[Symbol, Seq[TermTree]] = Map.empty
-  def positions(using Context, ThrowOrWarn): Seq[SourcePosition] = LiftedTree.collectPositions(this)
+  def scope(scoper: Scoper): Scope = scoper.getScope(tree)
+  def positions(scoper: Scoper): Seq[SourcePosition] = scope(scoper).allPositions.toSeq
   def capture(using Context, ThrowOrWarn): Seq[String] = LiftedTree.collectCapture(this)
 end LiftedTree
 
@@ -70,15 +71,21 @@ final case class InlinedFromDef[S](underlying: LiftedTree[S], inlineCall: Inline
   def symbol: S = underlying.symbol
   def owner: Symbol = underlying.owner
   def tpe: TermType = inlineCall.substTypeParams(underlying.tpe)
+
+  override def scope(scoper: Scoper): Scope = scoper.inlinedScope(underlying.scope(scoper), inlineCall)
+
   override def inlinedFrom: List[InlineCall] = inlineCall :: underlying.inlinedFrom
   override def inlinedArgs: Map[Symbol, Seq[TermTree]] = underlying.inlinedArgs
 
 /**
- * An inline call arg can capture a variable passed to another argument of the same call
+ * A lambda in an inline lambda can capture a val passed as argument to the inline call
  * Example:
- *   inline def withContext(ctx: Context)(f: Context ?=> T): T = f(ctx)
+ *   inline def withContext(ctx: Context)(inline f: Context ?=> T): T = f(using ctx)
  *   withContext(someCtx)(list.map(<anon fun>))
  * <anon fun> can capture someCtx
+ * 
+ * @param params the params of the inline lambda
+ * @param inlineArgs the other args of the inline call
  */
 final case class InlinedFromArg[S](underlying: LiftedTree[S], params: Seq[TermSymbol], inlineArgs: Seq[TermTree])
     extends LiftedTree[S]:
@@ -90,46 +97,6 @@ final case class InlinedFromArg[S](underlying: LiftedTree[S], params: Seq[TermSy
   override def inlinedArgs: Map[Symbol, Seq[TermTree]] = underlying.inlinedArgs ++ params.map(_ -> inlineArgs)
 
 object LiftedTree:
-  // todo should also map the inlineArgs as a map Map[TermSymbol, TermTree]
-  private def collectPositions(liftedTree: LiftedTree[?])(using
-      Context,
-      ThrowOrWarn
-  ): Seq[SourcePosition] =
-    val positions = mutable.Set.empty[SourcePosition]
-    val alreadySeen = mutable.Set.empty[Symbol]
-
-    def registerPosition(pos: SourcePosition): Unit =
-      if pos.isFullyDefined then positions += pos
-
-    def loopCollect(symbol: Symbol)(collect: => Unit): Unit =
-      if !alreadySeen.contains(symbol) then
-        alreadySeen += symbol
-        collect
-
-    class Traverser(inlinedFrom: List[InlineCall], inlinedArgs: Map[Symbol, Seq[TermTree]]) extends TreeTraverser:
-      private val inlineMapping: Map[Symbol, TermTree] = inlinedFrom.headOption.toSeq.flatMap(_.paramsMap).toMap
-      override def traverse(tree: Tree): Unit =
-        tree match
-          case _: TypeTree => ()
-          case tree: TermReferenceTree =>
-            for sym <- tree.safeSymbol do
-              for arg <- inlineMapping.get(sym) do
-                registerPosition(arg.pos)
-                loopCollect(sym)(Traverser(inlinedFrom.tail, inlinedArgs).traverse(arg))
-              for args <- inlinedArgs.get(sym) do
-                val args = inlinedArgs(sym)
-                loopCollect(sym)(args.foreach(traverse))
-              for tree <- sym.tree if sym.isInline do
-                registerPosition(tree.pos)
-                loopCollect(sym)(traverse(tree))
-          case _ => ()
-        super.traverse(tree)
-
-    registerPosition(liftedTree.tree.pos)
-    Traverser(liftedTree.inlinedFrom, liftedTree.inlinedArgs).traverse(liftedTree.tree)
-    positions.toSeq
-  end collectPositions
-
   def collectCapture(liftedTree: LiftedTree[?])(using Context, ThrowOrWarn): Seq[String] =
     val capture = mutable.Set.empty[String]
     val alreadySeen = mutable.Set.empty[Symbol]

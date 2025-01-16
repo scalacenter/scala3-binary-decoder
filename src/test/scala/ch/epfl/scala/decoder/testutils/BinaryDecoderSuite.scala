@@ -88,6 +88,10 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       val binaryVariable = loadBinaryVariable(className, method, variable)
       intercept[AmbiguousException](decoder.decode(binaryVariable, line))
 
+    def decodeVariable(className: String, method: String, variable: String, line: Int): Unit =
+      val binaryVariable = loadBinaryVariable(className, method, variable)
+      decoder.decode(binaryVariable, line)
+
     def assertNotFoundVariable(className: String, method: String, variable: String, line: Int)(using
         munit.Location
     ): Unit =
@@ -121,36 +125,36 @@ trait BinaryDecoderSuite extends CommonFunSuite:
         expectedMethods: ExpectedCount = ExpectedCount(0),
         expectedFields: ExpectedCount = ExpectedCount(0),
         expectedVariables: ExpectedCount = ExpectedCount(0),
-        printProgress: Boolean = false
+        printProgress: Boolean = false,
+        classFilter: Set[String] = Set.empty
     )(using munit.Location): Unit =
-      val (classCounter, methodCounter, fieldCounter, variableCounter) = decodeAll(printProgress)
+      val (classCounter, methodCounter, fieldCounter, variableCounter) = decodeAll(printProgress, classFilter)
       if classCounter.throwables.nonEmpty then classCounter.printThrowable(0)
       else if methodCounter.throwables.nonEmpty then methodCounter.printThrowable(0)
       else if variableCounter.throwables.nonEmpty then variableCounter.printThrowable(0)
+      // methodCounter.printNotFound(40)
       variableCounter.printNotFound(40)
       classCounter.check(expectedClasses)
       methodCounter.check(expectedMethods)
       fieldCounter.check(expectedFields)
       variableCounter.check(expectedVariables)
 
-    def decodeAll(printProgress: Boolean = false): (Counter, Counter, Counter, Counter) =
+    def decodeAll(printProgress: Boolean = false, classFilter: Set[String] = Set.empty): (Counter, Counter, Counter, Counter) =
       val classCounter = Counter(decoder.name + " classes")
       val methodCounter = Counter(decoder.name + " methods")
       val fieldCounter = Counter(decoder.name + " fields")
       val variableCounter = Counter(decoder.name + " variables")
       for
         binaryClass <- decoder.allClasses
+        if classFilter.isEmpty || classFilter.contains(binaryClass.name)
         _ = if printProgress then println(s"\"${binaryClass.name}\"")
         decodedClass <- decoder.tryDecode(binaryClass, classCounter)
         _ = binaryClass.declaredFields.foreach(f => decoder.tryDecode(decodedClass, f, fieldCounter))
         binaryMethod <- binaryClass.declaredMethods
         decodedMethod <- decoder.tryDecode(decodedClass, binaryMethod, methodCounter)
         binaryVariable <- binaryMethod.variables
-        sourceLines <- binaryVariable.sourceLines
-        if sourceLines.lines.nonEmpty
+        line <- debugLine(binaryVariable)
       do
-        // It's tricky to guess a valid debug line. But in practice, it seems the middle one is a good guess.
-        val line = sourceLines.lines(sourceLines.lines.size / 2)
         decoder.tryDecode(decodedMethod, binaryVariable, line, variableCounter)
       classCounter.printReport()
       methodCounter.printReport()
@@ -247,16 +251,16 @@ trait BinaryDecoderSuite extends CommonFunSuite:
         case e => counter.throwables += (variable -> e)
   end extension
 
+  private def debugLine(variable: binary.Variable): Option[Int] =
+    // It's tricky to guess a valid debug line. But in practice, it seems the middle one is a good guess.
+    variable.sourceLines.map(_.lines).filter(_.nonEmpty).map(lines => lines(lines.size / 2))
+
   private def formatDebug(m: binary.Symbol): String =
     m match
-      case f: binary.Field => s"\"${f.declaringClass}\", \"${formatField(f)}\""
-      case m: binary.Method => s"\"${m.declaringClass.name}\", \"${formatMethod(m)}\""
+      case f: binary.Field => s"(\"${f.declaringClass}\", \"${formatField(f)}\")"
+      case m: binary.Method => s"(\"${m.declaringClass.name}\", \"${formatMethod(m)}\")"
       case v: binary.Variable =>
-        s"""|"${v.declaringMethod.declaringClass.name}",
-            |        "${formatMethod(v.declaringMethod)}",
-            |        "${formatVariable(v)}",
-            |        ${v.sourceLines.get.lines.head},
-            |""".stripMargin
+        s"""("${v.declaringMethod.declaringClass.name}", "${formatMethod(v.declaringMethod)}", "${formatVariable(v)}", ${debugLine(v).get})""".stripMargin
       case cls => s"\"${cls.name}\""
 
   private def formatMethod(m: binary.Method): String =
@@ -329,10 +333,7 @@ trait BinaryDecoderSuite extends CommonFunSuite:
       println(s"mean: ${formatted.map((j, s) => s.size - j.size).sum / formatted.size}")
     end printComparisionWithJavaFormatting
 
-    def printSuccess() =
-      success.foreach { (s, d) =>
-        println(s"${formatDebug(s)}: $d")
-      }
+    def printSuccess() = success.foreach { (s, _) => println(formatDebug(s)) }
 
     def printNotFound() =
       notFound.foreach { case (s1, NotFoundException(s2, _)) =>

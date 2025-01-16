@@ -99,7 +99,7 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
   ): Seq[DecodedVariable] =
     for
       tree <- decodedMethod.treeOpt.toSeq
-      localVar <- VariableCollector.collectVariables(tree).toSeq
+      localVar <- VariableCollector.collectVariables(scoper, tree).toSeq
       if variable.name == localVar.sym.nameStr && matchSourceLinesAndType(variable, localVar, sourceLine)
     yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
 
@@ -110,7 +110,7 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
   ): Seq[DecodedVariable] =
     for
       tree <- decodedMethod.owner.treeOpt.toSeq
-      localVar <- VariableCollector.collectVariables(tree).toSeq
+      localVar <- VariableCollector.collectVariables(scoper, tree).toSeq
       if variable.name == localVar.sym.nameStr && matchSourceLinesAndType(variable, localVar, sourceLine)
     yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
 
@@ -129,14 +129,14 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
       x.toSeq
     else
       for
-        localVar <- owner.tree.toSeq.flatMap(t => VariableCollector.collectVariables(t))
+        localVar <- owner.tree.toSeq.flatMap(t => VariableCollector.collectVariables(scoper, t))
         if variable.name == localVar.sym.nameStr
       yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
 
   private def decodeProxy(decodedMethod: DecodedMethod, name: String): Seq[DecodedVariable] =
     for
       metTree <- decodedMethod.treeOpt.toSeq
-      localVar <- VariableCollector.collectVariables(metTree)
+      localVar <- VariableCollector.collectVariables(scoper, metTree)
       if name == localVar.sym.nameStr
     yield DecodedVariable.ValDef(decodedMethod, localVar.sym.asTerm)
 
@@ -147,7 +147,7 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
     for
       metTree <- decodedMethod.treeOpt.toSeq
       decodedClassSym <- decodedClassSym.toSeq
-      if VariableCollector.collectVariables(metTree, sym = decodedMethod.symbolOpt).exists { localVar =>
+      if VariableCollector.collectVariables(scoper, metTree, sym = decodedMethod.symbolOpt).exists { localVar =>
         localVar.sym == decodedClassSym
       }
     yield DecodedVariable.This(decodedMethod, decodedClassSym.thisType)
@@ -200,14 +200,10 @@ trait BinaryVariableDecoder(using Context, ThrowOrWarn):
     matchSourceLines(variable, localVar, sourceLine) && matchType(variable.`type`, localVar)
 
   private def matchSourceLines(variable: binary.Variable, localVar: LocalVariable, sourceLine: Int): Boolean =
-    variable.declaringMethod.isConstructor ||
-      localVar.sourceLines
-        .zip(variable.declaringMethod.sourceLines)
-        .forall:
-          case (fromTasty, fromBinary) =>
-            fromTasty.lines.isEmpty ||
-            !fromTasty.sourceName.endsWith(fromBinary.sourceName) ||
-            fromTasty.lines.head <= sourceLine && sourceLine <= fromTasty.lines.last
+    val sourceName = variable.sourceName.getOrElse("")
+    // we use endsWith instead of == because of tasty-query#434
+    val positions = localVar.positions.filter(pos => pos.sourceFile.name.endsWith(sourceName))
+    variable.declaringMethod.isConstructor || positions.exists(_.containsLine(sourceLine - 1))
 
   private def matchType(binaryTpe: binary.Type, localVar: LocalVariable): Boolean =
     localVar.sym match

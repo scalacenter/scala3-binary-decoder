@@ -62,6 +62,8 @@ extension (symbol: TermSymbol)
     overridingSymbolInLinearization(siteClass) == symbol
   def isConstructor =
     symbol.owner.isClass && symbol.isMethod && symbol.name == nme.Constructor
+  def isParamInInlineMethod =
+    symbol.owner.isInline && symbol.owner.asTerm.paramSymbols.contains(symbol)
 
   def paramSymbols: List[TermSymbol] =
     symbol.tree.toList

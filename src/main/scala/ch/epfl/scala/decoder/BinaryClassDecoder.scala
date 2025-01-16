@@ -9,6 +9,8 @@ import scala.util.matching.Regex
 
 trait BinaryClassDecoder(using Context, ThrowOrWarn):
   self: BinaryDecoder =>
+  
+  protected val scoper = Scoper()
 
   def decode(cls: binary.BinaryClass): DecodedClass =
     val javaParts = cls.name.split('.')
@@ -165,5 +167,5 @@ trait BinaryClassDecoder(using Context, ThrowOrWarn):
 
   private def matchLines(liftedFun: LiftedTree[?], sourceLines: binary.SourceLines): Boolean =
     // we use endsWith instead of == because of tasty-query#434
-    val positions = liftedFun.positions.filter(pos => pos.sourceFile.name.endsWith(sourceLines.sourceName))
+    val positions = liftedFun.positions(scoper).filter(pos => pos.sourceFile.name.endsWith(sourceLines.sourceName))
     sourceLines.tastyLines.forall(line => positions.exists(_.containsLine(line)))
