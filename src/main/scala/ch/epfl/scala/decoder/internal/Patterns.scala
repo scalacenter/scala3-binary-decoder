@@ -5,7 +5,7 @@ import scala.util.matching.Regex
 
 object Patterns:
   object LocalClass:
-    def unapply(cls: binary.ClassType): Option[(String, String, Option[String])] =
+    def unapply(cls: binary.BinaryClass): Option[(String, String, Option[String])] =
       val decodedClassName = NameTransformer.decode(cls.name.split('.').last)
       unapply(decodedClassName)
 
@@ -16,7 +16,7 @@ object Patterns:
         .map(xs => (xs(0), xs(1), Option(xs(2)).map(_.stripPrefix("$")).filter(_.nonEmpty)))
 
   object AnonClass:
-    def unapply(cls: binary.ClassType): Option[(String, Option[String])] =
+    def unapply(cls: binary.BinaryClass): Option[(String, Option[String])] =
       val decodedClassName = NameTransformer.decode(cls.name.split('.').last)
       unapply(decodedClassName)
 
@@ -26,7 +26,7 @@ object Patterns:
         .map(xs => (xs(0), Option(xs(1)).map(_.stripPrefix("$")).filter(_.nonEmpty)))
 
   object InnerClass:
-    def unapply(cls: binary.ClassType): Option[String] =
+    def unapply(cls: binary.BinaryClass): Option[String] =
       val decodedClassName = NameTransformer.decode(cls.name.split('.').last)
       "(.+)\\$(.+)".r
         .unapplySeq(decodedClassName)
@@ -49,6 +49,11 @@ object Patterns:
     def unapply(method: binary.Method): Boolean =
       (!method.isBridge && !method.isStatic) &&
         "(.*)\\$\\$\\$outer".r.unapplySeq(NameTransformer.decode(method.name)).isDefined
+
+    def unapply(field: binary.Field): Boolean = field.name == "$outer"
+
+    def unapply(variable: binary.Variable): Boolean = variable.name == "$outer"
+  end Outer
 
   object AnonFun:
     def unapply(method: binary.Method): Boolean =
@@ -73,7 +78,7 @@ object Patterns:
 
   object LocalLazyInit:
     def unapply(method: binary.Method): Option[Seq[String]] =
-      if method.isBridge || !method.allParameters.forall(_.isGenerated) then None
+      if method.isBridge || !method.parameters.forall(_.isGeneratedParam) then None
       else method.extractFromDecodedNames("""(.+)\$lzyINIT\d+\$(\d+)""".r)(_(0).stripSuffix("$"))
 
   object SuperArg:
@@ -148,31 +153,32 @@ object Patterns:
     def unapply(field: binary.Field): Option[Int] =
       """OFFSET\$(?:_m_)?(\d+)""".r.unapplySeq(field.name).map(xs => xs(0).toInt)
 
-  object OuterField:
-    def unapply(field: binary.Field): Boolean = field.name == "$outer"
-
   object SerialVersionUID:
     def unapply(field: binary.Field): Boolean = field.name == "serialVersionUID"
 
   object AnyValCapture:
-    def unapply(field: binary.Field): Boolean =
-      field.name.matches("\\$this\\$\\d+")
+    def unapply(field: binary.Field): Boolean = unapply(field.name)
+    def unapply(variable: binary.Variable): Boolean = unapply(variable.name)
+    private def unapply(name: String): Boolean = name.matches("\\$this\\$\\d+")
 
   object Capture:
     def unapply(field: binary.Field): Option[Seq[String]] =
       field.extractFromDecodedNames("(.+)\\$\\d+".r)(xs => xs(0))
 
+    def unapply(variable: binary.Variable): Option[String] =
+      "(.+)\\$\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
+  end Capture
+
+  object CapturedLzyVariable:
+    def unapply(field: binary.Field): Option[Seq[String]] =
+      field.extractFromDecodedNames("(.+)\\$lzy\\d+\\$\\d+".r)(xs => xs(0))
+
+    def unapply(variable: binary.Variable): Option[String] =
+      "(.+)\\$lzy\\d+\\$\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
+
   object LazyValBitmap:
     def unapply(field: binary.Field): Option[String] =
       "(.+)bitmap\\$\\d+".r.unapplySeq(field.decodedName).map(xs => xs(0))
-
-  object CapturedLzyVariable:
-    def unapply(variable: binary.Variable): Option[String] =
-      "(.+)\\$lzy1\\$\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
-
-  object CapturedVariable:
-    def unapply(variable: binary.Variable): Option[String] =
-      "(.+)\\$\\d+".r.unapplySeq(variable.name).map(xs => xs(0))
 
   object CapturedTailLocalVariable:
     def unapply(variable: binary.Variable): Option[String] =

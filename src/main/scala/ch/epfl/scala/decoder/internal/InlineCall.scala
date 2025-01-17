@@ -4,6 +4,7 @@ import tastyquery.Trees.*
 import tastyquery.Symbols.*
 import tastyquery.Types.*
 import tastyquery.Contexts.*
+import tastyquery.SourcePosition
 import tastyquery.decoder.Substituters
 import ch.epfl.scala.decoder.ThrowOrWarn
 
@@ -15,7 +16,12 @@ case class InlineCall private (
 ):
   def symbol(using Context): TermSymbol = termRefTree.symbol.asTerm
 
+  def pos: SourcePosition = callTree.pos
+
   def substTypeParams(tpe: TermType)(using Context): TermType =
+    Substituters.substLocalTypeParams(tpe, symbol.typeParamSymbols, typeArgs)
+
+  def substTypeParams(tpe: Type)(using Context): Type =
     Substituters.substLocalTypeParams(tpe, symbol.typeParamSymbols, typeArgs)
 
   def paramsMap(using Context): Map[TermSymbol, TermTree] =
