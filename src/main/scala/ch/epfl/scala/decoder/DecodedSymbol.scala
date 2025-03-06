@@ -3,8 +3,9 @@ package ch.epfl.scala.decoder
 import ch.epfl.scala.decoder.internal.showBasic
 import tastyquery.SourcePosition
 import tastyquery.Symbols.*
-import tastyquery.Trees.Tree
+import tastyquery.Trees.*
 import tastyquery.Types.*
+import ch.epfl.scala.decoder.internal.InlineCall
 
 sealed trait DecodedSymbol:
   def symbolOpt: Option[ClassSymbol | TermSymbol] = None
@@ -35,6 +36,7 @@ object DecodedClass:
       else s"$underlying (inlined)"
 
 sealed trait DecodedMethod extends DecodedSymbol:
+  def base: DecodedMethod = this
   def owner: DecodedClass
   override def symbolOpt: Option[TermSymbol] = None
   def declaredType: TypeOrMethodic
@@ -154,13 +156,29 @@ object DecodedMethod:
     override def toString: String = s"AdaptedFun($owner, ${declaredType.showBasic})"
 
   final class InlinedMethod(val underlying: DecodedMethod, val callTree: Tree) extends DecodedMethod:
+    override def base: DecodedMethod = underlying.base
     override def owner: DecodedClass = underlying.owner
     override def declaredType: TypeOrMethodic = underlying.declaredType
     override def symbolOpt: Option[TermSymbol] = underlying.symbolOpt
+    override def treeOpt: Option[Tree] = underlying.treeOpt
     def callPos: SourcePosition = callTree.pos
     override def toString: String =
       if underlying.isInstanceOf[InlinedMethod] then underlying.toString
       else s"$underlying (inlined)"
+
+  final class InlinedMethodFromArg(
+      val underlying: DecodedMethod,
+      val lambdaParams: Seq[TermSymbol],
+      val inlineCall: InlineCall
+  ) extends DecodedMethod:
+    override def base: DecodedMethod = underlying.base
+    override def owner: DecodedClass = underlying.owner
+    override def declaredType: TypeOrMethodic = underlying.declaredType
+    override def symbolOpt: Option[TermSymbol] = underlying.symbolOpt
+    override def treeOpt: Option[Tree] = underlying.treeOpt
+    override def toString: String =
+      if underlying.isInstanceOf[InlinedMethodFromArg] then underlying.toString
+      else s"$underlying (inlined from arg)"
 
 sealed trait DecodedField extends DecodedSymbol:
   def owner: DecodedClass
@@ -203,7 +221,7 @@ object DecodedVariable:
   final class ValDef(val owner: DecodedMethod, val symbol: TermSymbol) extends DecodedVariable:
     def declaredType: TypeOrMethodic = symbol.declaredType
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
-    override def toString: String = s"LocalVariable($owner, ${symbol.showBasic})"
+    override def toString: String = s"ValDef($owner, ${symbol.showBasic})"
 
   final class CapturedVariable(val owner: DecodedMethod, val symbol: TermSymbol) extends DecodedVariable:
     def declaredType: TypeOrMethodic = symbol.declaredType
@@ -213,7 +231,19 @@ object DecodedVariable:
   final class This(val owner: DecodedMethod, val declaredType: Type) extends DecodedVariable:
     override def toString: String = s"This($owner, ${declaredType.showBasic})"
 
+  final class OuterParam(val owner: DecodedMethod, val declaredType: Type) extends DecodedVariable:
+    override def toString: String = s"OuterParam($owner, ${declaredType.showBasic})"
+
   final class AnyValThis(val owner: DecodedMethod, val symbol: TermSymbol) extends DecodedVariable:
     def declaredType: TypeOrMethodic = symbol.declaredType
     override def symbolOpt: Option[TermSymbol] = Some(symbol)
     override def toString: String = s"AnyValThis($owner, ${declaredType.showBasic})"
+
+  final class SetterParam(val owner: DecodedMethod.SetterAccessor, val declaredType: Type) extends DecodedVariable:
+    override def toString: String = s"SetterParam($owner, ${declaredType.showBasic})"
+
+  final class SpecializedParam(val owner: DecodedMethod.SpecializedMethod, val symbol: TermSymbol)
+      extends DecodedVariable:
+    def declaredType: TypeOrMethodic = symbol.declaredType
+    override def symbolOpt: Option[TermSymbol] = Some(symbol)
+    override def toString: String = s"SpecializedParam($owner, ${symbol.showBasic})"

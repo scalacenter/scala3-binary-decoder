@@ -1,14 +1,13 @@
 package ch.epfl.scala.decoder.internal
 
-import tastyquery.Trees.*
-import scala.collection.mutable
+import ch.epfl.scala.decoder.ThrowOrWarn
+import tastyquery.Contexts.*
 import tastyquery.Symbols.*
 import tastyquery.Traversers.*
-import tastyquery.Contexts.*
-import tastyquery.SourcePosition
+import tastyquery.Trees.*
 import tastyquery.Types.*
-import tastyquery.Traversers
-import ch.epfl.scala.decoder.ThrowOrWarn
+
+import scala.collection.mutable
 
 /**
  * Collect all trees that could be lifted by the compiler: local defs, lambdas, try clauses, by-name applications
@@ -16,11 +15,11 @@ import ch.epfl.scala.decoder.ThrowOrWarn
  * and compute the capture.
  */
 object LiftedTreeCollector:
-  def collect(sym: Symbol)(using Context, Definitions, ThrowOrWarn): Seq[LiftedTree[?]] =
+  def collect(sym: Symbol)(using Context, ThrowOrWarn): Seq[LiftedTree[?]] =
     val collector = LiftedTreeCollector(sym)
     sym.tree.toSeq.flatMap(collector.collect)
 
-class LiftedTreeCollector private (root: Symbol)(using Context, Definitions, ThrowOrWarn):
+class LiftedTreeCollector private (root: Symbol)(using Context, ThrowOrWarn):
   private val inlinedTrees = mutable.Map.empty[TermSymbol, Seq[LiftedTree[?]]]
   private var owner = root
 
@@ -62,10 +61,9 @@ class LiftedTreeCollector private (root: Symbol)(using Context, Definitions, Thr
             val liftedTrees = inlinedTrees.getOrElseUpdate(inlineCall.symbol, collectInlineDef(inlineCall.symbol))
             buffer ++= liftedTrees.map(InlinedFromDef(_, inlineCall))
             buffer ++= inlineCall.args.flatMap { arg =>
-              extractLambda(arg) match
+              arg.asLambda match
                 case Some(lambda) =>
-                  val params = lambda.meth.symbol.asTerm.paramSymbols
-                  collect(arg).map(InlinedFromArg(_, params, inlineCall.args))
+                  collect(arg).map(InlinedFromArg(_, lambda.paramSymbols, inlineCall))
                 case None => collect(arg)
             }
             super.traverse(inlineCall.termRefTree)
@@ -81,12 +79,6 @@ class LiftedTreeCollector private (root: Symbol)(using Context, Definitions, Thr
   private def collectInlineDef(symbol: TermSymbol): Seq[LiftedTree[?]] =
     inlinedTrees(symbol) = Seq.empty // break recursion
     symbol.tree.flatMap(extractRHS).toSeq.flatMap(collect)
-
-  private def extractLambda(tree: StatementTree): Option[Lambda] =
-    tree match
-      case lambda: Lambda => Some(lambda)
-      case block: Block => extractLambda(block.expr)
-      case _ => None
 
   private def extractRHS(tree: DefTree): Option[TermTree] =
     tree match

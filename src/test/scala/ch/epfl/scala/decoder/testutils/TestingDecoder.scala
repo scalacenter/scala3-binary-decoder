@@ -14,6 +14,15 @@ import java.nio.file.FileSystem
 object TestingDecoder:
   def javaRuntime = JavaRuntime(Properties.jdkHome).get
 
+  def apply(sources: Seq[String], scalaVersion: ScalaVersion)(using ThrowOrWarn): TestingDecoder =
+    val module = Module.fromSources(
+      sources.zipWithIndex.map((s, i) => s"Test$i.scala" -> s),
+      scalaVersion,
+      Seq.empty,
+      Seq.empty
+    )
+    TestingDecoder(module.mainEntry, module.classpath)
+
   def apply(source: String, scalaVersion: ScalaVersion)(using ThrowOrWarn): TestingDecoder =
     val module = Module.fromSource(source, scalaVersion)
     TestingDecoder(module.mainEntry, module.classpath)
@@ -43,7 +52,7 @@ class TestingDecoder(mainEntry: ClasspathEntry, val classLoader: BinaryClassLoad
     val binaryClass = classLoader.loadClass(cls)
     decode(binaryClass)
   def name: String = mainEntry.name
-  def allClasses: Seq[binary.ClassType] =
+  def allClasses: Seq[binary.BinaryClass] =
     def listClassNames(root: Path): Seq[String] =
       val classMatcher = root.getFileSystem.getPathMatcher("glob:**.class")
       Files

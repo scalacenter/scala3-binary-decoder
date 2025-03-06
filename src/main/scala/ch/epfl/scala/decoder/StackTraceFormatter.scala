@@ -14,8 +14,6 @@ class StackTraceFormatter(using ThrowOrWarn):
     val typeAscription = variable.declaredType match
       case tpe: Type => ": " + format(tpe)
       case tpe => format(tpe)
-    val test1 = formatOwner(variable)
-    val test2 = formatName(variable)
     formatName(variable) + typeAscription
 
   def formatMethodSignatures(input: String): String = {
@@ -86,6 +84,7 @@ class StackTraceFormatter(using ThrowOrWarn):
       case method: DecodedMethod.AdaptedFun => formatOwner(method.target)
       case method: DecodedMethod.SAMOrPartialFunctionConstructor => format(method.owner)
       case method: DecodedMethod.InlinedMethod => formatOwner(method.underlying)
+      case method: DecodedMethod.InlinedMethodFromArg => formatOwner(method.underlying)
 
   private def formatOwner(field: DecodedField): String =
     format(field.owner)
@@ -109,6 +108,9 @@ class StackTraceFormatter(using ThrowOrWarn):
       case variable: DecodedVariable.CapturedVariable => formatName(variable.symbol).dot("<capture>")
       case variable: DecodedVariable.This => "this"
       case variable: DecodedVariable.AnyValThis => formatName(variable.symbol)
+      case variable: DecodedVariable.OuterParam => "<outer>"
+      case variable: DecodedVariable.SetterParam => "x$0"
+      case variable: DecodedVariable.SpecializedParam => formatName(variable.symbol).dot("<specialized>")
 
   private def formatName(method: DecodedMethod): String =
     method match
@@ -137,6 +139,7 @@ class StackTraceFormatter(using ThrowOrWarn):
       case method: DecodedMethod.AdaptedFun => formatName(method.target).dot("<adapted>")
       case _: DecodedMethod.SAMOrPartialFunctionConstructor => "<init>"
       case method: DecodedMethod.InlinedMethod => formatName(method.underlying)
+      case method: DecodedMethod.InlinedMethodFromArg => formatName(method.underlying)
 
   private def formatOwner(sym: Symbol): String = formatAsOwner(sym.owner)
 
@@ -179,6 +182,7 @@ class StackTraceFormatter(using ThrowOrWarn):
   private def format(name: Name): String =
     def rec(name: Name): String = name match
       case DefaultGetterName(termName, num) => s"${termName.toString()}.<default ${num + 1}>"
+      case SimpleTypeName("<FromJavaObject>") => "Object"
       case name: TypeName => rec(name.toTermName)
       case SimpleName("$anonfun") => "<anon fun>"
       case SimpleName("$anon") => "<anon class>"
